@@ -28,3 +28,11 @@ Afin d'estimer au mieux les effets, un modèle de régression économétriques pourr
 (type de bien, nombre de pièces, proximité du centre ville, proximité géographique des services)
 
 Eventuellement un appariemment avec la base DPE de l'ADEME pourra être tenté pour observer les caractéristiques de eprformance énergétique et énvironnementale
+
+Décomposition du code :
+- construction_dvf.ipynb : crée la base des transactions dans les communes cotières
+- geolocalisation_actifs.ipynb : géolocalise les transactions non renseignées
+- geolocalisation_risque.ipynb : demande à l'API géorisque si le bien est en zone inondable
+- construction_tri.ipynb : crée la base .parquet des zones inondables
+- visualisation_cotieres.ipynb : crée une carte de chaleur dans des grandes villes
+- modele_gradient_ipynb : estime l'effet d'être en zone inondable
