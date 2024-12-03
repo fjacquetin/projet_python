@@ -12,6 +12,9 @@ folium==0.18.0
 pandasgui==0.2.14
 nbconvert==7.16.4
 pyarrow==17.0.0
+statsmodel==0.13.5
+overpy==0.7
+re==3.13.0
 
 # Machine Learning
 scikit-learn==1.3.1
