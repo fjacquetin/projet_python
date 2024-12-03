@@ -3,7 +3,44 @@ import pandas as pd
 import os
 import gzip
 import shutil
+import re
 
+def fix_coordinates_format(coord_str):
+    """
+    Transforme une chaîne contenant une liste de tuples de Decimal
+    en une liste de tuples de float, en ignorant les erreurs.
+    """
+    if isinstance(coord_str, str):
+        # Nettoyer la chaîne en remplaçant 'Decimal' par les valeurs brutes
+        clean_str = re.sub(r"Decimal\('([\d\.\-]+)'\)", r"\1", coord_str)
+        try:
+            # Évaluer la chaîne nettoyée comme une liste de tuples
+            parsed_list = eval(clean_str)
+            if isinstance(parsed_list, list):
+                # Convertir chaque tuple en float
+                return [
+                    (float(lat), float(lon)) 
+                    for lat, lon in parsed_list 
+                    if lat is not None and lon is not None
+                ]
+        except (ValueError, SyntaxError, TypeError) as e:
+            print(f"Erreur lors de l'analyse : {coord_str} -> {e}")
+            return None  # Retourner None en cas d'échec
+    elif isinstance(coord_str, list):
+        # Si c'est déjà une liste, vérifier et convertir
+        try:
+            return [
+                (float(lat), float(lon)) 
+                for lat, lon in coord_str 
+                if lat is not None and lon is not None
+            ]
+        except TypeError as e:
+            print(f"Erreur de conversion : {coord_str} -> {e}")
+            return None
+    else:
+        print(f"Type inattendu : {type(coord_str)}")
+        return None
+    
 def telecharger_et_decompresser(url, fichier_destination):
     """
     Télécharge un fichier compressé depuis une URL, puis le décompresse
