@@ -96,5 +96,28 @@ def construire_modele_regression(df, colonnes_explicatives, colonne_dependante):
 
     # Variable dépendante y
     y = df_clean[colonne_dependante]
+    X = sm.add_constant(X)
+    model = sm.OLS(y, X).fit()
+    
+    return model
 
-    return X, y
+def extraire_resultats_modele(modele, nom_modele):
+    """
+    Extrait les résultats d'un modèle sous forme de DataFrame.
+    """
+    resultats = []
+    for var, coef, pval in zip(modele.params.index, modele.params, modele.pvalues):
+        if not var.startswith("commune_"):  # Exclure les variables liées aux communes
+            significativite = ""
+            if pval < 0.01:
+                significativite = "***"
+            elif pval < 0.05:
+                significativite = "**"
+            elif pval < 0.1:
+                significativite = "*"
+            resultats.append({
+                "variable": var,
+                f"{nom_modele}_coef": round(float(coef), 4),  # Arrondi à 4 chiffres
+                f"{nom_modele}_signif": f"{pval:.4f} {significativite}"
+            })
+    return pd.DataFrame(resultats)
