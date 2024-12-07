@@ -1,5 +1,2 @@
 script/__pycache__/*.pyc
-data/transactions_with_zone_inondable.csv
-data/communes_cotieres.csv
-data/moyenne.csv
-data/base.csv
+data/*.csv
