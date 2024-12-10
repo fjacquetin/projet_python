@@ -71,6 +71,8 @@ def get_communes_france(url_communes='https://raw.githubusercontent.com/gregoire
     # Charger le GeoJSON dans un GeoDataFrame
     gdf_communes = gpd.GeoDataFrame.from_features(communes_geojson['features'])
     
+    print(gdf_communes)
+
     #reprojection en Lambert 93
     gdf_communes = gdf_communes.set_crs(epsg=4326)
     gdf_communes = gdf_communes.to_crs(epsg=2154)
@@ -177,16 +179,15 @@ def get_zones_inondables():
         extraction_suppression_zip(fichier_zones_inondables, dossier_zones_inondables)
 
 
-def fusion_fichiers_inondations(nomenclature_zones_inondables = "iso_ht_01_01for_s_"):
+def fusion_fichiers_inondations(nomenclature_zones_inondables = "iso_ht_03_01for_s_"):
     """
         Fonction de fusion des zones inondables
-        fichier zones inondables = **iso_ht_01_01for_s_{departement}.shp
+        fichier zones inondables = **iso_ht_03_01for_s_{departement}.shp
 
         TODO: lister tous les fichiers shp dans un répertoire 
         les charger dans un dataframe
         generalisation cartographique
         export en shp
-
     """
 
     # Lister tous les fichiers et dossiers dans le répertoire   
@@ -201,29 +202,47 @@ def fusion_fichiers_inondations(nomenclature_zones_inondables = "iso_ht_01_01for
 
     gdf_liste = []
     for fichier_shp in fichiers_zones_inondables:
+        departement = fichier_shp.split('.')[0][-2:]
         gdf = gpd.read_file(fichier_shp)
+        gdf['dept'] = departement
         #print(gdf)
-        gdf_liste.append(gdf[['id', 'id_tri', 'geometry']])
+        gdf_liste.append(gdf[['id', 'dept', 'id_tri', 'geometry']])
 
     gdf_combine = pd.concat(gdf_liste, ignore_index=True)
 
-    #généralisation cartographique
+    #généralisation cartographique avec l'algorithme Douglas-Peucker
     gdf_combine['geometry'] = gdf_combine['geometry'].simplify(tolerance=5)
 
-    map = folium.Map(location=[48, 2], zoom_start=10)
-    folium.GeoJson(gdf_combine).add_to(map)
-    map.save("projet_python/data/carte_zones_inondables_risque_fort.html")
-
-    output_shp = "projet_python/data/zones_inondables/output.shp"
+    print("export du geodataframe des zones inondables en shp")
+    output_shp = "projet_python/data/zones_inondables/zones_inondables.shp"
     gdf_combine.to_file(output_shp)
+
+def edition_carte_zones_inondables(fichier_shp_zones_inondables = "projet_python/data/zones_inondables/zones_inondables.shp"):
+    """
+        fonction d'édition des zones inondables
+    """
+
+    print("edition de la carte des zones inondables")
+    gdf = gpd.read_file(fichier_shp_zones_inondables)
+    
+    #print(gdf)
+
+    map = folium.Map(location=[48, 2], zoom_start=10)
+
+    #print(gdf)
+
+    folium.GeoJson(gdf.loc[gdf['dept'] == '06']).add_to(map)
+    map.save("projet_python/data/carte_zones_inondables_risque_fort.html")
 
 
 if __name__ == "__main__":
     #get_communes_france()
+
     #get_communes_cotieres()
     #show_communes_cotieres()
 
-    #get_zones_inondables()
+    get_zones_inondables()
 
     fusion_fichiers_inondations()
     
+    edition_carte_zones_inondables()
