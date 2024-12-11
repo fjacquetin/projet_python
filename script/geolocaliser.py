@@ -1,16 +1,45 @@
 import requests as rq
 import pandas as pd
 from shapely.geometry import Point
+from concurrent.futures import ThreadPoolExecutor
+
+def fetch_coordinates(index, address, root, key):
+    """
+    Effectue une requête pour récupérer les coordonnées d'une adresse.
+    
+    Args:
+        index (int): L'index de la ligne.
+        address (str): L'adresse à géolocaliser.
+        root (str): URL de base de l'API.
+        key (str): Clé de requête pour l'API.
+    
+    Returns:
+        tuple: Index, latitude, longitude (ou None si une erreur survient).
+    """
+    try:
+        req = rq.get(f'{root}{key}{address}')
+        if req.status_code == 200:
+            response_data = pd.json_normalize(req.json()['features'])
+            data = response_data.iloc[0]  # Prend le premier résultat
+            latitude = data['geometry.coordinates'][1]  # Latitude
+            longitude = data['geometry.coordinates'][0]  # Longitude
+            return index, latitude, longitude
+        else:
+            print(f"Erreur de requête pour l'adresse : {address}, statut : {req.status_code}")
+    except Exception as e:
+        print(f"Erreur pour l'adresse : {address} - {e}")
+    return index, None, None
 
 def geolocaliser_actifs(df,
                         colonne_adresse,
                         colonne_latitude,
                         colonne_longitude,
                         root='https://api-adresse.data.gouv.fr/search/',
-                        key='?q='
-                        ):
+                        key='?q=',
+                        max_workers=10):
     """
     Remplit les colonnes latitude et longitude manquantes en interrogeant l'API Adresse de data.gouv.fr.
+    Avec parallélisation des requêtes.
     
     Args:
         df (pd.DataFrame): Le DataFrame contenant les adresses.
@@ -19,27 +48,22 @@ def geolocaliser_actifs(df,
         colonne_longitude (str): Nom de la colonne pour la longitude.
         root (str): URL de base de l'API (par défaut : API Adresse de data.gouv.fr).
         key (str): Clé de requête pour l'API (par défaut : '?q=').
+        max_workers (int): Nombre maximum de threads parallèles.
     
     Returns:
         pd.DataFrame: Le DataFrame avec les colonnes latitude et longitude mises à jour.
     """
-    for index, row in df.iterrows():
-        address = row[colonne_adresse]
-        req = rq.get(f'{root}{key}{address}')
-        
-        if req.status_code == 200:
-            try:
-                # Récupérer les informations de latitude et longitude
-                response_data = pd.json_normalize(req.json()['features'])
-                data = response_data.iloc[0]  # Prend le premier résultat
-                
-                # Mise à jour des colonnes latitude et longitude
-                df.at[index, colonne_latitude] = data['geometry.coordinates'][1]  # Latitude
-                df.at[index, colonne_longitude] = data['geometry.coordinates'][0]  # Longitude
-            except IndexError:
-                print(f"Aucune donnée trouvée pour l'adresse : {address}")
-        else:
-            print(f"Erreur de requête pour l'adresse : {address}, statut : {req.status_code}")
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(fetch_coordinates, index, row[colonne_adresse], root, key): index
+            for index, row in df.iterrows()
+        }
+        for future in futures:
+            index, latitude, longitude = future.result()
+            if latitude is not None and longitude is not None:
+                df.at[index, colonne_latitude] = latitude
+                df.at[index, colonne_longitude] = longitude
+
     return df
 
 # Fonction pour vérifier si le point est dans le polygone de la commune
