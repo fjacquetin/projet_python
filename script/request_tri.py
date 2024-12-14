@@ -42,12 +42,12 @@ def check_inondable(lat, lon, commune=None, timeout=3):
                 # Si aucun ou plus d'un résultat, retourne juste le nombre de résultats
                 return results, None, None, None
         else:
-            print(f"Erreur API ({response.status_code}) pour la commune '{commune}' (lat: {lat}, lon: {lon}).")
+            # print(f"Erreur API ({response.status_code}) pour la commune '{commune}' (lat: {lat}, lon: {lon}).")
             return 0, None, None, None
 
     except requests.exceptions.Timeout:
-        print(f"Requête expirée pour la commune '{commune}' (lat: {lat}, lon: {lon}).")
+        # print(f"Requête expirée pour la commune '{commune}' (lat: {lat}, lon: {lon}).")
         return 0, None, None, None
-    except requests.exceptions.RequestException as e:
-        print(f"Erreur de connexion pour la commune '{commune}' (lat: {lat}, lon: {lon}): {e}")
+    except requests.exceptions.RequestException:
+        # print(f"Erreur de connexion pour la commune '{commune}' (lat: {lat}, lon: {lon}): {e}")
         return 0, None, None, None

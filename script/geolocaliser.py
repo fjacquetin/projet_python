@@ -136,14 +136,12 @@ def geolocaliser_mot_cle(df, colonne_commune, colonne_geometry, mots_cles, colon
                                 df.at[index, colonne_latitude] = latitude
                                 df.at[index, colonne_longitude] = longitude
                                 break  # Si trouvé, sortir de la boucle
-                        else:
-                            print(f"Aucune donnée pour la commune : {commune_name} avec {mot_cle}")
                     except IndexError:
-                        print(f"Aucune donnée trouvée pour l'adresse : {address}")
+                        pass
                 else:
-                    print(f"Erreur de requête pour la commune : {commune_name}, statut : {req.status_code}")
-            except rq.exceptions.RequestException as e:
-                print(f"Erreur de connexion pour la commune : {commune_name}. Détails : {e}")
+                    pass
+            except rq.exceptions.RequestException:
+                pass
 
     return df
 
@@ -178,8 +176,7 @@ def get_townhall_coordinates(commune_name, api):
         # Si aucune mairie trouvée
         return None, None
 
-    except Exception as e:
-        print(f"Erreur pour {commune_name}: {e}")
+    except Exception:
         return None, None
 
     
@@ -220,8 +217,7 @@ def get_beach_coordinates(commune_name, api):
 
         return beach_coordinates
 
-    except Exception as e:
-        print(f"Erreur pour {commune_name}: {e}")
+    except Exception:
         return []
     
 def get_station_coordinates(commune_name, api):
@@ -262,8 +258,7 @@ def get_station_coordinates(commune_name, api):
         # Retourner la liste des gares trouvées
         return station_coordinates if station_coordinates else [(None, None)]
 
-    except Exception as e:
-        print(f"Erreur pour {commune_name}: {e}")
+    except Exception:
         return [(None, None)]
     
 def get_ports(commune_name, api):
@@ -342,63 +337,13 @@ def get_ports(commune_name, api):
         # Retourner les coordonnées du premier port trouvé
         return latitude, longitude
 
-    except Exception as e:
-        print(f"Erreur pour {commune_name}: {e}")
+    except Exception:
         return None, None  # Renvoie des None en cas d'erreur
-
-def get_coastline(commune_name, api):
-    """
-    Recherche le trait de côte d'une commune via l'API Overpass.
-
-    Args:
-        commune_name (str): Nom de la commune.
-        api (overpy.Overpass): Instance de l'API Overpass.
-
-    Returns:
-        list: Liste des coordonnées du trait de côte sous forme de (latitude, longitude).
-    """
-    try:
-        # Construire la requête Overpass pour rechercher le trait de côte et les limites maritimes
-        query = f"""
-        [out:json];
-        area["name"="{commune_name}"]->.searchArea;
-        (
-          way["natural"="coastline"](area.searchArea);
-          way["boundary"="coastline"](area.searchArea);
-          way["boundary"="marine"](area.searchArea);
-          way["natural"="water"](area.searchArea);
-          way["natural"="wetland"](area.searchArea);
-          relation["natural"="coastline"](area.searchArea);
-          relation["type"="boundary"]["boundary"="maritime"](area.searchArea);
-        );
-        out body;
-        """
-        result = api.query(query)
-
-        coastline_coordinates = []
-
-        # Traitement des ways représentant le trait de côte
-        if result.ways:
-            for way in result.ways:
-                node_coords = [
-                    (node.lat, node.lon)
-                    for node in way.nodes
-                    if hasattr(node, "lat") and hasattr(node, "lon")
-                ]
-                coastline_coordinates.extend(node_coords)
-
-        return coastline_coordinates if coastline_coordinates else [(None, None)]
-
-    except Exception as e:
-        print(f"Erreur pour {commune_name}: {e}")
-        return [(None, None)]
 
 # Fonction pour traiter uniquement les lignes bien formées
 def safe_convert_coordinates(value):
     try:
-        # Essaye de convertir si la chaîne est bien formée
         parsed = ast.literal_eval(value)
         return [(float(lat), float(lon)) for lat, lon in parsed]
     except Exception:
-        # Si mal formé, retourne la valeur originale inchangée
         return value
