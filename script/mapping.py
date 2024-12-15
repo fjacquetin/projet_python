@@ -216,3 +216,26 @@ def display_map_in_notebook(commune_name, gdf, price_data, tri_by_commune, uniqu
     # Afficher la carte directement dans le notebook
     display(m)
 
+# Fonction de conversion forcée pour transformer les coordonnées sous forme de liste de tuples (latitude, longitude)
+def force_convert_to_tuple_list(beach_coordinates):
+    try:
+        # Si c'est déjà une liste, la convertir en liste de tuples
+        if isinstance(beach_coordinates, list):
+            # Convertir chaque élément de la liste en tuple (latitude, longitude)
+            return [(float(coord[0]), float(coord[1])) for coord in beach_coordinates]
+
+        # Si c'est une chaîne représentant une liste, on évalue la chaîne en une liste de tuples
+        elif isinstance(beach_coordinates, str):
+            coords = eval(beach_coordinates)  # Utilisation de eval avec prudence
+            return [(float(coord[0]), float(coord[1])) for coord in coords]
+        
+        # Si c'est un tuple contenant deux éléments (latitude, longitude), on le convertit en liste
+        elif isinstance(beach_coordinates, tuple) and len(beach_coordinates) == 2:
+            return [(float(beach_coordinates[0]), float(beach_coordinates[1]))]
+        
+        # Si la donnée n'est pas dans un format attendu, retourner une liste vide
+        else:
+            return []
+
+    except Exception:
+        return []
