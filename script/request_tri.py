@@ -1,6 +1,7 @@
 import requests
+import time
 
-def check_inondable(lat, lon, commune=None, timeout=3):
+def check_inondable(lat, lon, timeout=3):
     """
     Vérifie si une localisation est dans une zone inondable via l'API Georisques (tri_zonage).
     Si le nombre de résultats est 1, retourne directement l'identifiant TRI, le libellé du type d'inondation,
@@ -51,3 +52,27 @@ def check_inondable(lat, lon, commune=None, timeout=3):
     except requests.exceptions.RequestException:
         # print(f"Erreur de connexion pour la commune '{commune}' (lat: {lat}, lon: {lon}): {e}")
         return 0, None, None, None
+    
+def check_inondable_parallel(args):
+    """
+    Vérifie si un point géographique (latitude, longitude) est situé dans une zone inondable
+    en utilisant une fonction externe `check_inondable`. La fonction inclut une gestion des erreurs
+    et des tentatives multiples avec temporisation.
+
+    Args:
+        args (tuple): Un tuple contenant la latitude et la longitude du point (latitude, longitude).
+
+    Returns:
+        str: Résultat de la fonction `check_inondable` si la requête réussit.
+        None: Si toutes les tentatives échouent.
+    """
+    latitude, longitude = args
+    attempts = 2  # Nombre maximum de tentatives en cas d'échec
+    for _ in range(attempts):
+        try:
+            return check_inondable(latitude, longitude)
+        except requests.exceptions.RequestException:
+            # Temporisation pour gérer les erreurs de connexion
+            time.sleep(2)  
+    # Retourne None si toutes les tentatives échouent
+    return None
