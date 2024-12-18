@@ -3,10 +3,7 @@ from folium.plugins import HeatMap
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon
-from pyproj import Transformer
-from IPython.display import IFrame
 import os
-from IPython.display import display
 from IPython.display import display
 import folium
 import numpy as np
@@ -210,11 +207,11 @@ def add_markers_from_list(m, coordinates, color, icon, tooltip):
             lat, lon = coord
             add_marker(m, lat, lon, color, icon, tooltip)
             
-def display_map_in_notebook(commune_name, price_data, communes_coordinates, gdf):
+def display_map_in_notebook(commune_name, price_data, communes_coordinates, gdf, zoom=14, latitude_add=0, longitude_add=0):
     """
     Affiche la carte dans un notebook Jupyter
     """
-    m = create_map(commune_name, price_data, communes_coordinates, gdf)
+    m = create_map(commune_name, price_data, communes_coordinates, gdf, zoom, latitude_add, longitude_add)
     display(m)
 
 # Fonction de conversion forcée pour transformer les coordonnées sous forme de liste de tuples (latitude, longitude)
