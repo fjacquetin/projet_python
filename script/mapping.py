@@ -159,7 +159,7 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
         add_marker(m, latitude_port, longitude_port, color='purple', icon='home', tooltip="Port")
 
     # Ajouter des marqueurs pour les stations
-    add_markers_from_list(m, station_coordinates, color='blue', icon='info-sign', tooltip="Plage")
+    add_markers_from_list(m, station_coordinates, color='blue', icon='info-sign', tooltip="Station")
 
     return m
 
