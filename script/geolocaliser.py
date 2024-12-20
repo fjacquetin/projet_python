@@ -1,7 +1,8 @@
+from concurrent.futures import ThreadPoolExecutor
 import requests as rq
 import pandas as pd
+import ast as ast
 from shapely.geometry import Point
-from concurrent.futures import ThreadPoolExecutor
 
 def fetch_coordinates(index, address, root, key):
     """
@@ -26,9 +27,8 @@ def fetch_coordinates(index, address, root, key):
             return index, latitude, longitude
         else:
             print(f"Erreur de requête pour l'adresse : {address}, statut : {req.status_code}")
-    except Exception as e:
-        print(f"Erreur pour l'adresse : {address} - {e}")
-    return index, None, None
+    except Exception:
+        return index, None, None
 
 def geolocaliser_actifs(df,
                         colonne_adresse,
