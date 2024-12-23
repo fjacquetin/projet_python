@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-import requests as rq
+import requests
 import pandas as pd
 import ast as ast
 from shapely.geometry import Point
@@ -18,7 +18,7 @@ def fetch_coordinates(index, address, root, key):
         tuple: Index, latitude, longitude (ou None si une erreur survient).
     """
     try:
-        req = rq.get(f'{root}{key}{address}')
+        req = requests.get(f'{root}{key}{address}')
         if req.status_code == 200:
             response_data = pd.json_normalize(req.json()['features'])
             data = response_data.iloc[0]  # Prend le premier résultat
@@ -26,7 +26,7 @@ def fetch_coordinates(index, address, root, key):
             longitude = data['geometry.coordinates'][0]  # Longitude
             return index, latitude, longitude
         else:
-            print(f"Erreur de requête pour l'adresse : {address}, statut : {req.status_code}")
+            return index, None, None
     except Exception:
         return index, None, None
 
@@ -120,7 +120,7 @@ def geolocaliser_mot_cle(df, colonne_commune, colonne_geometry, mots_cles, colon
             address = f'{mot_cle}+{commune_name}'  # Format de l'adresse à rechercher
 
             try:
-                req = rq.get(f'{url_base}{key}{address}')
+                req = requests.get(f'{url_base}{key}{address}')
                 
                 if req.status_code == 200:
                     try:
@@ -140,7 +140,7 @@ def geolocaliser_mot_cle(df, colonne_commune, colonne_geometry, mots_cles, colon
                         pass
                 else:
                     pass
-            except rq.exceptions.RequestException:
+            except requests.exceptions.RequestException:
                 pass
 
     return df
@@ -179,7 +179,7 @@ def get_townhall_coordinates(commune_name, api):
     except Exception:
         return None, None
 
-    
+
 def get_beach_coordinates(commune_name, api):
     """
     Récupère les coordonnées des plages dans une commune via l'API Overpass.

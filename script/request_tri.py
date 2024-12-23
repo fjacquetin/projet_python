@@ -1,5 +1,5 @@
-import requests
 import time
+import requests
 
 def check_inondable(lat, lon, timeout=3):
     """

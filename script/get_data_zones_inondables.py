@@ -1,20 +1,12 @@
-
-#module de récupération des données
-
-import requests as rq
+import requests
 import geopandas as gpd
 import pandas as pd
 import os
-import matplotlib.pyplot as plt
 from shapely import wkt
-
 import folium
-
-#modules pour accélérer le téléchargement des zones inondables
 import aiohttp
 import asyncio
 import zipfile
-
 import glob
 
 async def telechargement_fichier(url, nom_fichier):
@@ -65,7 +57,7 @@ def get_communes_france(url_communes='https://raw.githubusercontent.com/gregoire
 
     print("récupération des communes francaises")
 
-    response_commune = rq.get(url_communes)
+    response_commune = requests.get(url_communes)
     communes_geojson = response_commune.json()
 
     # Charger le GeoJSON dans un GeoDataFrame
