@@ -241,3 +241,93 @@ def renommer_coef_colonnes(tableau, prefixe):
     tableau = tableau.rename(columns={col: "" for col in tableau.columns if "pvalue" in col})
     
     return tableau
+
+# Vecteurs ajoutés
+ordre_variables_app = [
+    'Observations',
+    'R² ajusté',
+    'const',
+    'zone_inondable',
+    'scenario_04Fai',
+    'scenario_02Moy_03Mcc',
+    'scenario_01For',
+    'zone_inondable x debordement',
+    'log_distance_centre_ville',
+    'log_distance_min_beach',
+    'log_distance_min_station',
+    'log_surface_reelle_bati',
+    'nombre_pieces_principales',
+    'terrain',
+    'dependance',
+    'periode_construction_dpe_1948-1974',
+    'periode_construction_dpe_1975-1988',
+    'periode_construction_dpe_1989-2000',
+    'periode_construction_dpe_2001-2012',
+    'periode_construction_dpe_après 2013',
+    'dpe_D',
+    'dpe_C',
+    'dpe_B',
+    'dpe_A',
+    'population_10000-20000',
+    'population_plus_20000',
+]
+
+ordre_variables_mai = [
+    'Observations',
+    'R² ajusté',
+    'const',
+    'zone_inondable',
+    'scenario_04Fai',
+    'scenario_02Moy_03Mcc',
+    'scenario_01For',
+    'zone_inondable x debordement',
+    'log_distance_centre_ville',
+    'log_distance_min_beach',
+    'log_distance_min_station',
+    'log_surface_reelle_bati',
+    'nombre_pieces_principales',
+    'terrain',
+    'dependance',
+    'periode_construction_dpe_1948-1974',
+    'periode_construction_dpe_1975-1988',
+    'periode_construction_dpe_1989-2000',
+    'periode_construction_dpe_2001-2012',
+    'periode_construction_dpe_après 2013',
+    'dpe_D',
+    'dpe_C',
+    'dpe_B',
+    'dpe_A',
+    'population_10000-20000',
+    'population_plus_20000'
+]
+
+def nettoyer_coordinates(coords):
+    """
+    Cette fonction permet de nettoyer une valeur de coordonnées en fonction de son type.
+
+    Arguments:
+    coords : Peut être de type liste, flottant ou None.
+        - Si `coords` est déjà une liste, elle est retournée telle quelle.
+        - Si `coords` est un nombre flottant ou `None`, la fonction retourne `None`.
+        - Dans tous les autres cas, la valeur de `coords` est retournée sans modification.
+
+    Retour:
+    - Une liste si `coords` est une liste.
+    - `None` si `coords` est un nombre flottant ou `None`.
+    - La valeur originale de `coords` si elle est valide et ne correspond à aucun des cas précédents.
+
+    Exemple:
+    >>> nettoyer_coordinates([1.0, 2.0, 3.0])
+    [1.0, 2.0, 3.0]
+
+    >>> nettoyer_coordinates(None)
+    None
+
+    >>> nettoyer_coordinates(5.5)
+    None
+    """
+    if isinstance(coords, list):  # Si c'est déjà une liste, la garder
+        return coords
+    if isinstance(coords, float) or coords is None:  # Si c'est un NaN ou autre, retourner None
+        return None
+    return coords  # Par défaut, retourner la valeur initiale (si elle est correcte)
