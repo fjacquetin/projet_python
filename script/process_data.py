@@ -1,9 +1,10 @@
-import requests as rq
+import requests
 import pandas as pd
 import os
 import gzip
 import shutil
 import re
+import zipfile
 
 def fix_coordinates_format(coord_str):
     """
@@ -52,7 +53,7 @@ def telecharger_et_decompresser(url, fichier_destination):
     """
     try:
         # Télécharger le fichier compressé
-        reponse = rq.get(url)
+        reponse = requests.get(url)
         reponse.raise_for_status()  # Vérifie si la requête a réussi
         nom_compression = fichier_destination + ".gz"
         
@@ -66,7 +67,7 @@ def telecharger_et_decompresser(url, fichier_destination):
                 shutil.copyfileobj(f_in, f_out)
         print(f"Le fichier a été décompressé sous : {fichier_destination}")
 
-    except rq.exceptions.RequestException as e:
+    except requests.exceptions.RequestException as e:
         print(f"Erreur lors du téléchargement du fichier : {e}")
     except Exception as e:
         print(f"Une erreur est survenue : {e}")
@@ -179,6 +180,41 @@ def check_abbreviation(adresse, abbreviations):
             first_word = ' '  # Remplacer le premier mot par un espace
     return first_word, nom_voie
 
+def process_population_data(url, zip_path="ensemble.zip", extracted_folder="ensemble"):
+    """
+    Télécharge un fichier ZIP, extrait son contenu et charge un fichier CSV spécifique dans un DataFrame.
+    
+    Args:
+        url (str): L'URL du fichier ZIP à télécharger.
+        zip_path (str, optional): Le chemin pour enregistrer le fichier ZIP téléchargé. Par défaut "ensemble.zip".
+        extracted_folder (str, optional): Le dossier où extraire les fichiers ZIP. Par défaut "ensemble".
+
+    Returns:
+        pd.DataFrame: DataFrame contenant les colonnes 'code_commune' et 'Population'.
+    """
+    # Télécharger le fichier ZIP
+    response = requests.get(url)
+    with open(zip_path, 'wb') as file:
+        file.write(response.content)
+
+    # Dézipper le fichier ZIP
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extracted_folder)
+
+    # Charger le fichier CSV dans un DataFrame
+    csv_path = os.path.join(extracted_folder, "donnees_communes.csv")
+    df_pop = pd.read_csv(csv_path, sep=";", encoding="utf8")
+
+    # Nettoyer les colonnes et renommer
+    df_pop = df_pop[['COM', "PMUN"]].rename(columns={'COM': 'code_commune',
+                                                       'PMUN': 'Population'})
+
+    # Nettoyage des fichiers temporaires
+    os.remove(zip_path)
+    shutil.rmtree(extracted_folder)
+
+    return df_pop
+
 def produce_stats(filtered_data, output_file):
     """
     Analyse les données des transactions immobilières pour calculer des statistiques 
@@ -275,3 +311,25 @@ def produce_stats(filtered_data, output_file):
         .hide(axis="index")  # Supprime l'index
         .set_caption(f"Top 20 des communes les plus peuplées - {output_file.split('/')[-1]}")
     )
+
+def download_and_extract_csv(url, output_csv_path):
+    """
+    Télécharge un fichier compressé à partir de l'URL et le décompresse en CSV.
+    """
+    # Nom du fichier compressé
+    downloaded_file = "downloaded_file.gz"
+    
+    # Envoyer la requête HTTP pour télécharger le fichier
+    response = requests.get(url)
+    
+    # Enregistrer le fichier compressé
+    with open(downloaded_file, 'wb') as file:
+        file.write(response.content)
+    
+    # Décompresser le fichier
+    with gzip.open(downloaded_file, 'rb') as f_in:
+        with open(output_csv_path, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    
+    # Supprimer le fichier compressé après décompression
+    os.remove(downloaded_file)
