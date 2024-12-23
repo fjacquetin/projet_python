@@ -87,6 +87,7 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
     - Les polygones inondables
     - Une heatmap des prix
     - Des marqueurs pour les plages, la mairie, le port et les stations.
+    - Une légende dynamique des prix immobiliers en fonction des déciles.
 
     Parameters:
         commune_name (str): Nom de la commune à traiter.
@@ -105,7 +106,6 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
     commune_row = communes_coordinates[communes_coordinates['nom_commune'] == commune_name]
     
     if commune_row.empty:
-        print(f"Pas de données pour la commune '{commune_name}'")
         return None
     
     identifiant_tri = commune_row['identifiant_tri'].iloc[0]
@@ -113,7 +113,6 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
 
     # Vérifier si commune_data est vide
     if commune_data.empty:
-        print(f"Aucun polygone inondable trouvé pour la commune '{commune_name}'")
         return None
 
     # Extraction des coordonnées supplémentaires
@@ -141,11 +140,39 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
     # Ajouter les polygones inondables
     plot_polygons_on_map(m, commune_data, color='blue', weight=2, fill=False)
 
-    # Ajouter la heatmap des prix
+    # Extraire les prix pour les déciles
     price_data_commune = price_data_commune.dropna(subset=['latitude', 'longitude', 'prix_m2'])
+    
+    # Calcul des déciles arrondis à l'unité
+    first_decile = round(np.percentile(price_data_commune['prix_m2'], 10))
+    median = round(np.percentile(price_data_commune['prix_m2'], 50))
+    ninth_decile = round(np.percentile(price_data_commune['prix_m2'], 90))
+
+    # Formatage avec séparateur de milliers
+    first_decile = f"{first_decile:,.0f}".replace(",", " ")
+    median = f"{median:,.0f}".replace(",", " ")
+    ninth_decile = f"{ninth_decile:,.0f}".replace(",", " ")
+
+    # Ajouter la heatmap des prix (sans gradient personnalisé)
     heat_data = price_data_commune[['latitude', 'longitude', 'prix_m2']].values.tolist()
     if heat_data:
-        HeatMap(heat_data, radius=10).add_to(m)
+        heatmap = HeatMap(heat_data, radius=10)
+        heatmap.add_to(m)
+
+    # Ajouter une légende avec les déciles
+    legend_html = f"""
+    <div style="position: fixed; 
+                bottom: 50px; left: 50px; width: 250px; height: 180px; 
+                background-color: white; border: 2px solid black; 
+                padding: 10px; font-size: 12px; z-index: 9999; 
+                box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.3);">
+        <b>{commune_name}</b><br>
+        <i style="width: 20px; height: 10px; display: inline-block;"></i> 1er décile : {first_decile}€<br>
+        <i style="width: 20px; height: 10px; display: inline-block;"></i> Médiane : {median}€<br>
+        <i style="width: 20px; height: 10px; display: inline-block;"></i> 9ème décile : {ninth_decile}€
+    </div>
+    """
+    m.get_root().html.add_child(folium.Element(legend_html))
 
     # Ajouter des marqueurs pour les plages
     add_markers_from_list(m, beach_coordinates, color='green', icon='info-sign', tooltip="Plage")
@@ -172,8 +199,6 @@ def save_map(commune_name, map_obj):
     file_name = f'maps/{commune_name}_map.html'
     map_obj.save(file_name)
     return file_name
-
-# def create_map(gdf, commune_name, price_data, communes_coordinates):
 
 def generate_and_save_maps(price_data, communes_coordinates, gdf):
     maps = {}
