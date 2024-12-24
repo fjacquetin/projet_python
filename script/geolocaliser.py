@@ -83,7 +83,7 @@ def verifier_dans_polygone(latitude, longitude, geometry):
     return geometry.contains(point)  # Vérifie si le point est dans le polygone
 
 # Fonction pour rechercher les coordonnées à partir d'un mot-clé
-def geolocaliser_mot_cle(df, colonne_commune, colonne_geometry, mots_cles, colonne_latitude, colonne_longitude, url_base='https://api-adresse.data.gouv.fr/search/', key='?q='):
+def geolocaliser_mot_cle(df, mots_cles, colonne_latitude, colonne_longitude, colonne_commune="nom", colonne_geometry="geometry", url_base='https://api-adresse.data.gouv.fr/search/', key='?q='):
     """
     Recherche successivement les coordonnées d'une commune en utilisant plusieurs mots-clés et vérifie si elles se trouvent dans le polygone.
     
@@ -347,3 +347,33 @@ def safe_convert_coordinates(value):
         return [(float(lat), float(lon)) for lat, lon in parsed]
     except Exception:
         return value
+
+def calculate_commune_centers(gdf_communes, df_cotieres):
+    """
+    Calculate the centers of coastal communes from a shapefile and additional data.
+
+    Parameters:
+        gdf_communes (GeoDataFrame): Geodataframe des communes
+        df_cotieres (DataFrame): DataFrame containing additional data with columns 'Nom commune' and 'Population'.
+
+    Returns:
+        GeoDataFrame: Processed GeoDataFrame with centroid latitude and longitude.
+    """
+    liste_cotieres = df_cotieres['Nom commune'].unique().tolist()
+
+    # Filter for coastal communes
+    gdf_communes_cotieres = gdf_communes[gdf_communes['nom'].isin(liste_cotieres)]
+    # Merge with additional data
+    gdf_communes_cotieres = gdf_communes_cotieres.merge(
+        df_cotieres[['Nom commune', 'Population']], 
+        left_on='nom', 
+        right_on='Nom commune'
+    ).drop(columns=['Nom commune'])
+
+    # Calculate centroids for each commune
+    gdf_communes_cotieres['centroid'] = gdf_communes_cotieres.geometry.centroid
+    gdf_communes_cotieres['latitude_centre'] = gdf_communes_cotieres['centroid'].y
+    gdf_communes_cotieres['longitude_centre'] = gdf_communes_cotieres['centroid'].x
+    gdf_communes_cotieres = gdf_communes_cotieres.drop(columns=['centroid'])
+
+    return gdf_communes_cotieres
