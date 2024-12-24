@@ -250,13 +250,6 @@ def produce_stats(filtered_data, output_file):
         .unstack(fill_value=0)  # Remplace NaN par 0
     )
     
-    # Calcul du prix moyen total par commune
-    mean_total = (
-        filtered_data
-        .groupby('nom_commune')['prix_m2']
-        .mean()
-    )
-    
     # Renommer les colonnes pour les prix moyens par zone
     mean_by_zone = mean_by_zone.rename(columns={0: 'prix_moyen_non_inondable', 1: 'prix_moyen_inondable'})
     
@@ -283,7 +276,7 @@ def produce_stats(filtered_data, output_file):
     mean_by_zone = mean_by_zone.join(population_data, on='nom_commune')
     
     # Trier les communes par population décroissante et sélectionner les 20 plus peuplées
-    result_table = mean_by_zone.sort_values(by='Population', ascending=False).head(20)
+    result_table = mean_by_zone.sort_values(by='Population', ascending=False).head(10)
     
     # Exporter le DataFrame final en CSV
     result_table.to_csv(output_file, encoding='utf-8-sig', sep=";", decimal=",", index=True)
@@ -309,7 +302,7 @@ def produce_stats(filtered_data, output_file):
         result_table
         .style
         .hide(axis="index")  # Supprime l'index
-        .set_caption(f"Top 20 des communes les plus peuplées - {output_file.split('/')[-1]}")
+        .set_caption(f"Top 10 des communes les plus peuplées - {output_file.split('/')[-1]}")
     )
 
 def download_and_extract_csv(url, output_csv_path):
@@ -333,3 +326,23 @@ def download_and_extract_csv(url, output_csv_path):
     
     # Supprimer le fichier compressé après décompression
     os.remove(downloaded_file)
+    
+colonnes_a_supprimer = ['adresse_suffixe',
+                        'code_nature_culture',
+                        'ancien_code_commune',
+                        'ancien_nom_commune',
+                        'ancien_id_parcelle',
+                        'numero_volume',
+                        'code_nature_culture_speciale',
+                        'nature_culture_speciale',
+                        'lot1_numero',
+                        'lot2_numero',
+                        'lot3_numero',
+                        'lot4_numero',
+                        'lot5_numero',
+                        'lot1_surface_carrez',
+                        'lot2_surface_carrez',
+                        'lot3_surface_carrez',
+                        'lot4_surface_carrez',
+                        'lot5_surface_carrez'
+                        ]
