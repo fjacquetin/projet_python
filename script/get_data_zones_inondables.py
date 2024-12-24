@@ -8,6 +8,7 @@ import aiohttp
 import asyncio
 import zipfile
 import glob
+from IPython.display import display
 
 async def telechargement_fichier(url, nom_fichier):
     """
@@ -45,7 +46,7 @@ def extraction_suppression_zip(fichier_zip, dossier_destination):
         print(f"une erreur est apparue: {e}")
 
 
-def get_communes_france(url_communes='https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/communes.geojson', fichier_sortie_communes_france = 'projet_python/data/communes_france/communes_france.shp'):
+def get_communes_france(url_communes='https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/communes.geojson', fichier_sortie_communes_france = 'data/communes_france/communes_france.shp'):
 
     """
         fonction de téléchargement des communes françaises à partir d'un fichier geojson
@@ -55,15 +56,13 @@ def get_communes_france(url_communes='https://raw.githubusercontent.com/gregoire
         sortie_fichier_communes_france_shp (str): localisation fichier de sortie des communes en shapefile
     """
 
-    print("récupération des communes francaises")
+    print("Récupération des communes francaises")
 
     response_commune = requests.get(url_communes)
     communes_geojson = response_commune.json()
 
     # Charger le GeoJSON dans un GeoDataFrame
     gdf_communes = gpd.GeoDataFrame.from_features(communes_geojson['features'])
-    
-    print(gdf_communes)
 
     #reprojection en Lambert 93
     gdf_communes = gdf_communes.set_crs(epsg=4326)
@@ -72,17 +71,15 @@ def get_communes_france(url_communes='https://raw.githubusercontent.com/gregoire
     #export des communes en Shapefile
     gdf_communes.to_file(fichier_sortie_communes_france)
 
-def get_communes_cotieres(fichier_communes_france = "projet_python/data/communes_france/communes_france.shp", fichier_trait_de_cote = "projet_python/data/trait_de_cote/TCH_FRA_V2/Shapefile/TCH.shp",\
-     fichier_sortie_communes_cotieres="projet_python/data/communes_cotieres/communes_cotieres.shp"):
+def get_communes_cotieres(fichier_communes_france = "data/communes_france/communes_france.shp", fichier_trait_de_cote = "data/trait_de_cote/TCH_FRA_V2/Shapefile/TCH.shp",\
+     fichier_sortie_communes_cotieres="data/communes_cotieres/communes_cotieres.shp"):
     """
         Fonction de récupération des communes cotières en France à partir d'une jointure spatiale
     
         fichier_communes_france (str): localisation fichier des communes shp
         fichier_trait_de_cote (str): localisation fichier trait de cote shp
-        fichier_sortie_communes_cotieres (str): localisation fichier communes cotieres shp
+        fichier_sortie_communes_cotieres (str): localisation fichier communes côtieres shp
     """
-
-    print("récupération des communes cotieres")
 
     #chargement des communes et du trait de côte
     gdf_communes = gpd.read_file(fichier_communes_france)
@@ -91,11 +88,15 @@ def get_communes_cotieres(fichier_communes_france = "projet_python/data/communes
     #jointure spatiale pour récupérer les communes cotières
     gdf_communes_cotieres = gpd.sjoin(gdf_communes, gdf_trait_cote, how='inner', predicate='intersects')
 
+    # Supprimer le fichier existant, si nécessaire
+    if os.path.exists(fichier_sortie_communes_cotieres):
+        os.remove(fichier_sortie_communes_cotieres)
+
+    # Écriture du fichier
     gdf_communes_cotieres.to_file(fichier_sortie_communes_cotieres)
 
-
-def show_communes_cotieres(fichier_communes_cotieres_csv = "projet_python/data/communes_cotieres.csv", fichier_communes_cotieres_shp = "projet_python/data/communes_cotieres/communes_cotieres.shp",\
-     communes_cotieres_shp_map = 'projet_python/data/map_communes_cotieres.html', communes_cotieres_csv_map = 'projet_python/data/map_communes_cotieres_csv.html'):
+def show_communes_cotieres(fichier_communes_cotieres_csv = "data/communes_cotieres.csv", fichier_communes_cotieres_shp = "data/communes_cotieres/communes_cotieres.shp",\
+     communes_cotieres_shp_map = 'data/map_communes_cotieres.html', communes_cotieres_csv_map = 'data/map_communes_cotieres_csv.html'):
     """
         fonction de représentation des communes cotières
         Deux cartes sont prduites à partir de folium:
@@ -108,11 +109,7 @@ def show_communes_cotieres(fichier_communes_cotieres_csv = "projet_python/data/c
         communes_cotieres_csv_map (str): localisation carte communes cotieres issues du csv
     """
 
-    print("représentation des communes cotieres")
-
     communes_cotieres_shp = gpd.read_file(fichier_communes_cotieres_shp)
-    
-    print(communes_cotieres_shp)
 
     df_csv = pd.read_csv(fichier_communes_cotieres_csv, delimiter = ';')
 
@@ -121,8 +118,8 @@ def show_communes_cotieres(fichier_communes_cotieres_csv = "projet_python/data/c
 
     gdf_csv = gpd.GeoDataFrame(df_csv, geometry=df_csv['geometry'])
 
-    map_shp = folium.Map(location=[48, 2], zoom_start=10)
-    map_csv = folium.Map(location=[48, 2], zoom_start=10)
+    map_shp = folium.Map(location=[46, 3], zoom_start=5)
+    map_csv = folium.Map(location=[46, 3], zoom_start=5)
 
     # Add GeoDataFrame as GeoJSON to the Folium map
     folium.GeoJson(communes_cotieres_shp).add_to(map_shp)
@@ -135,7 +132,8 @@ def show_communes_cotieres(fichier_communes_cotieres_csv = "projet_python/data/c
 
     map_shp.save(communes_cotieres_shp_map)
     map_csv.save(communes_cotieres_csv_map)
-
+    
+    display(map_shp)
 
 def get_zones_inondables():
     """
@@ -145,7 +143,7 @@ def get_zones_inondables():
         faire le plot des zones inondables sur la carte des gradients de prix
     """
 
-    gdf_communes_cotieres = gpd.read_file("projet_python/data/communes_cotieres/communes_cotieres.shp")
+    gdf_communes_cotieres = gpd.read_file("data/communes_cotieres/communes_cotieres.shp")
 
     #print(gdf_communes_cotieres)
 
@@ -160,13 +158,13 @@ def get_zones_inondables():
         url = f"https://files.georisques.fr/di_2020/tri_2020_sig_di_{departement}.zip"
 
         # Nom du fichier local
-        fichier_zones_inondables = f"projet_python/data/zones_inondables/tri_2020_sig_di_{departement}.zip"
+        fichier_zones_inondables = f"data/zones_inondables/tri_2020_sig_di_{departement}.zip"
 
         # Exécuter la fonction de téléchargement asynchrone
         asyncio.run(telechargement_fichier(url, fichier_zones_inondables))
 
         #extraction du fichier zip et suppression de l'archive
-        dossier_zones_inondables = "projet_python/data/zones_inondables/"
+        dossier_zones_inondables = "data/zones_inondables/"
 
         extraction_suppression_zip(fichier_zones_inondables, dossier_zones_inondables)
 
@@ -183,11 +181,11 @@ def fusion_fichiers_inondations(nomenclature_zones_inondables = "iso_ht_03_01for
     """
 
     # Lister tous les fichiers et dossiers dans le répertoire   
-    fichiers_zones_inondables = glob.glob(os.path.join("projet_python/data/zones_inondables/**/**/", "*"+nomenclature_zones_inondables+"*.shp"))
+    fichiers_zones_inondables = glob.glob(os.path.join("data/zones_inondables/**/**/", "*"+nomenclature_zones_inondables+"*.shp"))
     print(len(fichiers_zones_inondables))
 
     #suppression des fichiers shp qui ne sont pas utilisés pour la fusion
-    fichiers_shp_a_supprimer = glob.glob(os.path.join("projet_python/data/zones_inondables/**/**/", "*.shp"))
+    fichiers_shp_a_supprimer = glob.glob(os.path.join("data/zones_inondables/**/**/", "*.shp"))
     for f in fichiers_shp_a_supprimer:
         if f not in fichiers_zones_inondables:
             os.remove(f)
@@ -205,16 +203,16 @@ def fusion_fichiers_inondations(nomenclature_zones_inondables = "iso_ht_03_01for
     #généralisation cartographique avec l'algorithme Douglas-Peucker
     gdf_combine['geometry'] = gdf_combine['geometry'].simplify(tolerance=5)
 
-    print("export du geodataframe des zones inondables en shp")
-    output_shp = "projet_python/data/zones_inondables/zones_inondables.shp"
+    print("Export du geodataframe des zones inondables en shp")
+    output_shp = "data/zones_inondables/zones_inondables.shp"
     gdf_combine.to_file(output_shp)
 
-def edition_carte_zones_inondables(fichier_shp_zones_inondables = "projet_python/data/zones_inondables/zones_inondables.shp"):
+def edition_carte_zones_inondables(fichier_shp_zones_inondables = "data/zones_inondables/zones_inondables.shp"):
     """
         fonction d'édition des zones inondables
     """
 
-    print("edition de la carte des zones inondables")
+    print("Edition de la carte des zones inondables")
     gdf = gpd.read_file(fichier_shp_zones_inondables)
     
     #print(gdf)
@@ -224,17 +222,4 @@ def edition_carte_zones_inondables(fichier_shp_zones_inondables = "projet_python
     #print(gdf)
 
     folium.GeoJson(gdf.loc[gdf['dept'] == '06']).add_to(map)
-    map.save("projet_python/data/carte_zones_inondables_risque_fort.html")
-
-
-if __name__ == "__main__":
-    #get_communes_france()
-
-    #get_communes_cotieres()
-    #show_communes_cotieres()
-
-    get_zones_inondables()
-
-    fusion_fichiers_inondations()
-    
-    edition_carte_zones_inondables()
+    map.save("data/carte_zones_inondables_risque_fort.html")

@@ -5,7 +5,6 @@ import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon
 import os
 from IPython.display import display
-import folium
 import numpy as np
 
 def extract_polygons_from_multipolygons(gdf):
@@ -104,7 +103,7 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
 
     # Extraire les données pour la commune spécifiée
     commune_row = communes_coordinates[communes_coordinates['nom_commune'] == commune_name]
-    
+
     if commune_row.empty:
         return None
     
@@ -162,14 +161,14 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
     # Ajouter une légende avec les déciles
     legend_html = f"""
     <div style="position: fixed; 
-                bottom: 50px; left: 50px; width: 250px; height: 180px; 
-                background-color: white; border: 2px solid black; 
-                padding: 10px; font-size: 12px; z-index: 9999; 
-                box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.3);">
-        <b>{commune_name}</b><br>
-        <i style="width: 20px; height: 10px; display: inline-block;"></i> 1er décile : {first_decile}€<br>
-        <i style="width: 20px; height: 10px; display: inline-block;"></i> Médiane : {median}€<br>
-        <i style="width: 20px; height: 10px; display: inline-block;"></i> 9ème décile : {ninth_decile}€
+            bottom: 50px; left: 50px; width: 250px; height: 180px; 
+            background-color: white; border: 2px solid black; 
+            padding: 10px; font-size: 12px; z-index: 9999; 
+            box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.3);">
+    <b>{commune_name}</b><br>
+    <i style="width: 20px; height: 10px; display: inline-block;"></i> 1er décile : {first_decile}€<br>
+    <i style="width: 20px; height: 10px; display: inline-block;"></i> Médiane : {median}€<br>
+    <i style="width: 20px; height: 10px; display: inline-block;"></i> 9ème décile : {ninth_decile}€
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))
