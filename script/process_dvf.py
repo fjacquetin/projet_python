@@ -1,4 +1,41 @@
 import pandas as pd
+from IPython.display import display
+
+def afficher_tableau_par_id_mutation(df, id_mutation_str):
+    """
+    Affiche un tableau filtré par id_mutation dans un joli format pour Jupyter Notebook.
+    
+    Paramètres :
+    df (DataFrame) : Le DataFrame contenant les données.
+    id_mutation_str (str) : L'ID de mutation sous forme de chaîne à filtrer.
+    """
+    
+    # Vérifier si l'id_mutation existe dans les données
+    if 'id_mutation' not in df.columns:
+        print("Erreur : la colonne 'id_mutation' n'existe pas dans le DataFrame.")
+        return
+    
+    # Filtrer le DataFrame en fonction de l'id_mutation
+    df_filtered = df[df['id_mutation'].astype(str) == id_mutation_str]
+    
+    # Si aucun résultat n'est trouvé, afficher un message
+    if df_filtered.empty:
+        print(f"Aucun enregistrement trouvé pour l'id_mutation {id_mutation_str}.")
+        return
+    
+    # Sélectionner les colonnes nécessaires
+    colonnes_a_afficher = ['id_mutation', 'valeur_fonciere', 'type_local', 'surface_reelle_bati', 
+                           'surface_terrain', 'nature_culture', 'nombre_pieces_principales']
+    
+    # Vérifier que toutes les colonnes existent
+    colonnes_existantes = [col for col in colonnes_a_afficher if col in df.columns]
+    df_filtered = df_filtered[colonnes_existantes]
+    df_filtered = df_filtered.reset_index(drop=True)
+
+    # Affichage du tableau avec un formatage soigné
+    display(df_filtered)
+
+    return None
 
 def process_group(group):
     
