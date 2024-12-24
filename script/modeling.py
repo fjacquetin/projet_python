@@ -71,7 +71,7 @@ def transformer_log(df, colonnes):
         df[log_col_name] = np.log(df[col].replace(0, np.nan))  # Calcul du log et ajout dans la nouvelle colonne
     return df
 
-def construire_modele_regression(df, colonnes_explicatives, colonne_dependante):
+def construire_modele_regression(df, colonnes_explicatives, colonne_dependante = "log_prix_m2"):
     """
     Crée un modèle de régression linéaire à partir des données spécifiées.
 
@@ -235,7 +235,7 @@ def renommer_coef_colonnes(tableau, prefixe):
     """
     # Renommer les colonnes des coefficients
     for i, col in enumerate([col for col in tableau.columns if "_coef" in col]):
-        tableau.rename(columns={col: f"({prefixe} - M{i+1})"}, inplace=True)
+        tableau.rename(columns={col: f"{prefixe} - M{i+1}"}, inplace=True)
     
     # Supprimer les titres des colonnes contenant "pvalue"
     tableau = tableau.rename(columns={col: "" for col in tableau.columns if "pvalue" in col})
@@ -248,10 +248,10 @@ ordre_variables_app = [
     'R² ajusté',
     'const',
     'zone_inondable',
+    'zone_inondable x debordement',
     'scenario_04Fai',
     'scenario_02Moy_03Mcc',
     'scenario_01For',
-    'zone_inondable x debordement',
     'log_distance_centre_ville',
     'log_distance_min_beach',
     'log_distance_min_station',
@@ -277,10 +277,10 @@ ordre_variables_mai = [
     'R² ajusté',
     'const',
     'zone_inondable',
+    'zone_inondable x debordement',
     'scenario_04Fai',
     'scenario_02Moy_03Mcc',
     'scenario_01For',
-    'zone_inondable x debordement',
     'log_distance_centre_ville',
     'log_distance_min_beach',
     'log_distance_min_station',
@@ -331,3 +331,92 @@ def nettoyer_coordinates(coords):
     if isinstance(coords, float) or coords is None:  # Si c'est un NaN ou autre, retourner None
         return None
     return coords  # Par défaut, retourner la valeur initiale (si elle est correcte)
+
+def traiter_resultats(modele_app1, modele_app2, modele_app3, modele_app4, modele_mai1, modele_mai2, modele_mai3, modele_mai4):
+    """
+    Fonction pour traiter les résultats des modèles d'appartements et de maisons en plusieurs étapes.
+    
+    Cette fonction effectue les opérations suivantes :
+    - Extraction des résultats pour les modèles d'appartements et de maisons.
+    - Filtrage des variables associées à chaque résultat.
+    - Fusion des résultats en un seul tableau pour les appartements et un autre pour les maisons.
+    - Traitement des coefficients et des p-values (conversion en numérique, arrondi, ajout d'étoiles aux p-values).
+    - Réorganisation des lignes dans les tableaux résultants.
+    - Renommage des colonnes pour les distinguer entre appartements et maisons.
+    
+    Arguments :
+    modele_app1, modele_app2, modele_app3, modele_app4 : modèles pour les appartements (4 modèles)
+    modele_mai1, modele_mai2, modele_mai3, modele_mai4 : modèles pour les maisons (4 modèles)
+    
+    Retourne :
+    tuple : (tableau_app, tableau_mai) où chaque tableau est un DataFrame contenant les résultats traités
+    pour les appartements et les maisons respectivement.
+    """
+    
+    # Extraction des résultats pour les modèles appartements
+    resultats_app1 = extraire_resultats_modele(modele_app1, "A.1")
+    resultats_app2 = extraire_resultats_modele(modele_app2, "A.2")
+    resultats_app3 = extraire_resultats_modele(modele_app3, "A.3")
+    resultats_app4 = extraire_resultats_modele(modele_app4, "A.4")
+
+    # Extraction des résultats pour les modèles maisons
+    resultats_mai1 = extraire_resultats_modele(modele_mai1, "M.1")
+    resultats_mai2 = extraire_resultats_modele(modele_mai2, "M.2")
+    resultats_mai3 = extraire_resultats_modele(modele_mai3, "M.3")
+    resultats_mai4 = extraire_resultats_modele(modele_mai4, "M.4")
+
+    # Retirer les coefficients associés aux communes pour davantage de lisibilité
+    resultats_app1 = filtrer_variables(resultats_app1)
+    resultats_app2 = filtrer_variables(resultats_app2)
+    resultats_app3 = filtrer_variables(resultats_app3)
+    resultats_app4 = filtrer_variables(resultats_app4)
+
+    resultats_mai1 = filtrer_variables(resultats_mai1)
+    resultats_mai2 = filtrer_variables(resultats_mai2)
+    resultats_mai3 = filtrer_variables(resultats_mai3)
+    resultats_mai4 = filtrer_variables(resultats_mai4)
+
+    # Effectuer les jointures sur la colonne 'variable' pour les appartements puis les maisons
+    tableau_app = resultats_app1.merge(resultats_app2, on="variable", how="outer")
+    tableau_app = tableau_app.merge(resultats_app3, on="variable", how="outer")
+    tableau_app = tableau_app.merge(resultats_app4, on="variable", how="outer")
+
+    tableau_mai = resultats_mai1.merge(resultats_mai2, on="variable", how="outer")
+    tableau_mai = tableau_mai.merge(resultats_mai3, on="variable", how="outer")
+    tableau_mai = tableau_mai.merge(resultats_mai4, on="variable", how="outer")
+
+    # Sélectionner les colonnes des coefficients pour les appartements et les maisons
+    coef_columns_app = [col for col in tableau_app.columns if "_coef" in col]
+    coef_columns_mai = [col for col in tableau_mai.columns if "_coef" in col]
+
+    # Convertir en float et arrondir les coefficients
+    tableau_app[coef_columns_app] = tableau_app[coef_columns_app].apply(pd.to_numeric, errors='coerce')
+    tableau_mai[coef_columns_mai] = tableau_mai[coef_columns_mai].apply(pd.to_numeric, errors='coerce')
+
+    # Appliquer l'arrondi et ajouter des étoiles aux p-values pour les appartements et les maisons
+    model_ids_app = [col.split("_")[0] for col in tableau_app.columns if "_pvalue" in col]
+    model_ids_mai = [col.split("_")[0] for col in tableau_mai.columns if "_pvalue" in col]
+
+    tableau_app = arrondir_pvalue_ajouter_etoiles(tableau_app, model_ids_app)
+    tableau_mai = arrondir_pvalue_ajouter_etoiles(tableau_mai, model_ids_mai)
+
+    # Réorganiser les lignes pour les deux tableaux (appartements et maisons)
+    tableau_app = reordonner_lignes(tableau_app, ordre_variables_app)
+    tableau_mai = reordonner_lignes(tableau_mai, ordre_variables_mai)
+
+    # Appliquer le renommage des colonnes pour chaque tableau
+    tableau_app = renommer_coef_colonnes(tableau_app, "Appart")
+    tableau_mai = renommer_coef_colonnes(tableau_mai, "Maison")
+
+    app_columns = [col for col in tableau_app.columns if col.startswith("App")]
+    mai_columns = [col for col in tableau_mai.columns if col.startswith("Mai")]
+
+    # Arrondir les valeurs dans ces colonnes à 4 chiffres après la virgule
+    tableau_app[app_columns] = tableau_app[app_columns].round(4)
+    tableau_app[app_columns] = tableau_app[app_columns].applymap(lambda x: f"{x:.4f}".rstrip('0').rstrip('.'))
+
+    tableau_mai[mai_columns] = tableau_mai[mai_columns].round(4)
+    tableau_mai[mai_columns] = tableau_mai[mai_columns].applymap(lambda x: f"{x:.4f}".rstrip('0').rstrip('.'))
+
+    # Retourner les deux tableaux traités
+    return tableau_app, tableau_mai
