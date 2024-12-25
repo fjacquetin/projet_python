@@ -5,6 +5,10 @@ import gzip
 import shutil
 import re
 import zipfile
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
 
 def fix_coordinates_format(coord_str):
     """
@@ -41,7 +45,8 @@ def fix_coordinates_format(coord_str):
     else:
         print(f"Type inattendu : {type(coord_str)}")
         return None
-    
+
+
 def telecharger_et_decompresser(url, fichier_destination):
     """
     Télécharge un fichier compressé depuis une URL, puis le décompresse
@@ -77,6 +82,7 @@ def telecharger_et_decompresser(url, fichier_destination):
             os.remove(nom_compression)
             print(f"Le fichier compressé {nom_compression} a été supprimé.")
 
+
 # Fonction pour traiter un fichier et ajouter à la liste des DataFrames
 def traiter_fichier(annee, base_url, colonnes_a_supprimer):
     """
@@ -110,6 +116,7 @@ def traiter_fichier(annee, base_url, colonnes_a_supprimer):
     
     return df
 
+
 # Fonction pour convertir les colonnes en chaîne de caractères
 def convertir_en_str(df, colonnes):
     """
@@ -127,6 +134,7 @@ def convertir_en_str(df, colonnes):
         # Remplacer les valeurs manquantes par des chaînes vides et convertir en str
         df[col] = df[col].fillna('').astype(str)
     return df
+
 
 def nettoyer_colonnes(df,
                       colonnes
@@ -150,6 +158,7 @@ def nettoyer_colonnes(df,
         df[col] = df[col].str.replace('nan', '', regex=False)
         df[col] = df[col].fillna('')
     return df
+
 
 def check_abbreviation(adresse, abbreviations):
     """
@@ -179,6 +188,7 @@ def check_abbreviation(adresse, abbreviations):
             nom_voie = adresse  # L'adresse complète si ce n'est pas une abréviation
             first_word = ' '  # Remplacer le premier mot par un espace
     return first_word, nom_voie
+
 
 def process_population_data(url, zip_path="ensemble.zip", extracted_folder="ensemble"):
     """
@@ -214,6 +224,7 @@ def process_population_data(url, zip_path="ensemble.zip", extracted_folder="ense
     shutil.rmtree(extracted_folder)
 
     return df_pop
+
 
 def produce_stats(filtered_data, output_file):
     """
@@ -275,7 +286,7 @@ def produce_stats(filtered_data, output_file):
     population_data = filtered_data.groupby('nom_commune')['Population'].max()
     mean_by_zone = mean_by_zone.join(population_data, on='nom_commune')
     
-    # Trier les communes par population décroissante et sélectionner les 20 plus peuplées
+    # Trier les communes par population décroissante et sélectionner les 10 plus peuplées
     result_table = mean_by_zone.sort_values(by='Population', ascending=False).head(10)
     
     # Exporter le DataFrame final en CSV
@@ -298,12 +309,51 @@ def produce_stats(filtered_data, output_file):
     result_table['Population'] = result_table['Population'].apply(lambda x: f"{x:,.0f}".replace(',', ' '))
 
     # Retourner le tableau stylé
-    return (
-        result_table
-        .style
-        .hide(axis="index")  # Supprime l'index
-        .set_caption(f"Top 10 des communes les plus peuplées - {output_file.split('/')[-1]}")
-    )
+    return (result_table)
+
+
+def plot_ecart_prix(result_table,type):
+    """
+    Génère un graphique à barres côte à côte pour visualiser les prix non inondables et inondables
+    pour les 10 communes les plus peuplées.
+
+    Args:
+        result_table (pd.DataFrame): DataFrame contenant les résultats de l'analyse des prix par zone.
+    """
+    # Création d'une nouvelle figure
+    plt.figure(figsize=(12, 6))
+
+    # Initialiser les positions des barres (utilisation d'un petit écart pour les mettre côte à côte)
+    x = np.arange(len(result_table))  # Position des communes
+    width = 0.35  # Largeur des barres
+
+    if result_table['prix_moyen_non_inondable'].dtype == 'object':
+        result_table['prix_moyen_non_inondable'] = result_table['prix_moyen_non_inondable'].str.replace(' ', '').astype(float)
+
+    if result_table['prix_moyen_inondable'].dtype == 'object':
+        result_table['prix_moyen_inondable'] = result_table['prix_moyen_inondable'].str.replace(' ', '').astype(float)
+
+    # Tracer les barres pour les prix non inondables et inondables
+    plt.bar(x - width/2, result_table['prix_moyen_non_inondable'], width, label='Non Inondable', color='skyblue')
+    plt.bar(x + width/2, result_table['prix_moyen_inondable'], width, label='Inondable', color='coral')
+
+    # Ajouter des labels et un titre
+    plt.title(f'Prix au mètre carré par commune ({type} - Non Inondable vs Inondable)', fontsize=16)
+    plt.xlabel('Commune', fontsize=14)
+    plt.ylabel('Prix du m2 (en €)', fontsize=14)
+
+    # Rotation des étiquettes sur l'axe des x pour une meilleure lisibilité
+    plt.xticks(x, result_table['nom_commune'], rotation=45, ha='right')
+
+    # Ajouter une légende
+    plt.legend()
+
+    # Ajuster les limites de l'axe des y pour bien visualiser les barres
+    plt.tight_layout()
+
+    # Afficher le graphique
+    plt.show()
+    
 
 def download_and_extract_csv(url, output_csv_path):
     """
@@ -327,22 +377,89 @@ def download_and_extract_csv(url, output_csv_path):
     # Supprimer le fichier compressé après décompression
     os.remove(downloaded_file)
     
-colonnes_a_supprimer = ['adresse_suffixe',
-                        'code_nature_culture',
-                        'ancien_code_commune',
-                        'ancien_nom_commune',
-                        'ancien_id_parcelle',
-                        'numero_volume',
-                        'code_nature_culture_speciale',
-                        'nature_culture_speciale',
-                        'lot1_numero',
-                        'lot2_numero',
-                        'lot3_numero',
-                        'lot4_numero',
-                        'lot5_numero',
-                        'lot1_surface_carrez',
-                        'lot2_surface_carrez',
-                        'lot3_surface_carrez',
-                        'lot4_surface_carrez',
-                        'lot5_surface_carrez'
-                        ]
+colonnes_a_supprimer_dans_dvf = ['adresse_suffixe',
+                                 'code_nature_culture',
+                                 'ancien_code_commune',
+                                 'ancien_nom_commune',
+                                 'ancien_id_parcelle',
+                                 'numero_volume',
+                                 'code_nature_culture_speciale',
+                                 'nature_culture_speciale',
+                                 'lot1_numero',
+                                 'lot2_numero',
+                                 'lot3_numero',
+                                 'lot4_numero',
+                                 'lot5_numero',
+                                 'lot1_surface_carrez',
+                                 'lot2_surface_carrez',
+                                 'lot3_surface_carrez',
+                                 'lot4_surface_carrez',
+                                 'lot5_surface_carrez'
+                                 ]
+
+
+def compute_percentage(df, column):
+    """
+    Calcule les pourcentages des modalités d'une colonne spécifiée d'un DataFrame.
+    Crée un DataFrame avec un titre 'Part' pour chaque modalité et ses pourcentages.
+    Regroupe les None et NaN dans la catégorie 'NaN' et trie les résultats par part décroissante.
+    
+    Args:
+        df (pd.DataFrame): Le DataFrame contenant les données.
+        column (str): Le nom de la colonne pour laquelle calculer les pourcentages.
+
+    Returns:
+        pd.DataFrame: Un DataFrame contenant les modalités et leurs pourcentages formatés.
+    """
+    # Remplacer None et NaN par 'NaN' avant le comptage
+    df[column] = df[column].fillna('NaN')
+    
+    # Comptage des modalités pour la colonne
+    modalites = df[column].value_counts(dropna=False)
+    
+    # Calcul des pourcentages pour la colonne
+    percent = (modalites / modalites.sum()) * 100
+    
+    # Arrondi à 1 chiffre après la virgule
+    percent = percent.round(1)
+    
+    # Formatage des pourcentages en chaîne avec '%' ajouté
+    percent = percent.apply(lambda x: f"{x}%")
+    
+    # Créer un DataFrame avec les modalités et leurs pourcentages
+    result_df = pd.DataFrame({
+        'Part': percent
+    })
+    
+    # Trier par part décroissante et mettre 'NaN' en haut
+    result_df['Part_value'] = modalites / modalites.sum()  # Pour le tri basé sur la valeur
+    result_df = result_df.sort_values(by='Part_value', ascending=False)
+    
+    # Remettre la colonne 'Part_value' pour le tri, puis supprimer après le tri
+    result_df = result_df.drop(columns=['Part_value'])
+    
+    return result_df
+
+
+def plot_density(df, column, xlim=(0, 10000)):
+    """
+    Trace la densité des données d'une colonne d'un DataFrame.
+
+    Args:
+        df (pd.DataFrame): Le DataFrame contenant les données.
+        column (str): Le nom de la colonne pour laquelle tracer la densité.
+        xlim (tuple, optional): Limites de l'axe X (par défaut (0, 10000)).
+    """
+    # Tracer la densité de la colonne spécifiée
+    plt.figure(figsize=(10, 6))
+    sns.kdeplot(df[column], shade=True, color="skyblue", alpha=0.7)
+
+    # Ajouter un titre et des labels
+    plt.title(f'Densité de {column}', fontsize=16)
+    plt.xlabel(column, fontsize=14)
+    plt.ylabel('Densité', fontsize=14)
+    plt.xlim(xlim)
+
+    # Afficher le graphique
+    plt.tight_layout()
+    plt.show()
