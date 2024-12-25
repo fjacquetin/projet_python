@@ -1,39 +1,9 @@
-import math
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from geopy.distance import geodesic
+import math
 
-def distance_haversine(lat1, lon1, lat2, lon2):
-    """
-    Calcule la distance en kilomètres entre deux points géographiques
-    (latitude, longitude) en utilisant la formule de Haversine.
-
-    Args:
-        lat1, lon1: Coordonnées (latitude et longitude) du premier point en degrés.
-        lat2, lon2: Coordonnées (latitude et longitude) du second point en degrés.
-
-    Returns:
-        Distance entre les deux points en kilomètres.
-    """
-    # Rayon moyen de la Terre en kilomètres
-    R = 6371.0
-
-    # Convertir les degrés en radians
-    lat1_rad = math.radians(lat1)
-    lon1_rad = math.radians(lon1)
-    lat2_rad = math.radians(lat2)
-    lon2_rad = math.radians(lon2)
-
-    # Calcul des différences
-    delta_lat = lat2_rad - lat1_rad
-    delta_lon = lon2_rad - lon1_rad
-
-    # Formule de Haversine
-    a = math.sin(delta_lat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    distance = R * c
-
-    return distance
 
 def distance_minimale(lat1, lon1, liste_coords):
     """
@@ -44,14 +14,21 @@ def distance_minimale(lat1, lon1, liste_coords):
         liste_coords: Liste de tuples contenant des coordonnées (latitude, longitude).
     
     Returns:
-        Distance minimale en kilomètres ou None si la liste est vide.
+        Distance minimale en kilomètres ou None si la liste est vide ou si lat1/lon1 sont invalides.
     """
+    
+    # Vérifier si lat1 ou lon1 sont NaN
+    if math.isnan(lat1) or math.isnan(lon1):
+        return None
+
     if not liste_coords:  # Vérifie si la liste est vide
         return None
 
-    # Calcul de la distance minimale en utilisant la fonction `distance_haversine`
-    distances = [distance_haversine(lat1, lon1, lat, lon) for lat, lon in liste_coords]
-    return min(distances)
+    # Calcul de la distance minimale en utilisant geodesic
+    return min(
+        geodesic((lat1, lon1), (lat, lon)).kilometers for lat, lon in liste_coords
+    )
+    
 
 def transformer_log(df, colonnes):
     """
@@ -70,6 +47,7 @@ def transformer_log(df, colonnes):
         log_col_name = f"log_{col}"  # Créer le nom de la nouvelle colonne
         df[log_col_name] = np.log(df[col].replace(0, np.nan))  # Calcul du log et ajout dans la nouvelle colonne
     return df
+
 
 def construire_modele_regression(df, colonnes_explicatives, colonne_dependante = "log_prix_m2"):
     """
@@ -100,6 +78,7 @@ def construire_modele_regression(df, colonnes_explicatives, colonne_dependante =
     model = sm.OLS(y, X).fit()
     
     return model
+
 
 # Fonction pour extraire les résultats des modèles
 def extraire_resultats_modele(modele, suffixe):
@@ -189,6 +168,7 @@ def filtrer_variables(resultats):
     """
     return resultats[~resultats["variable"].str.startswith("commune")]
 
+
 # Fonction pour réorganiser les lignes selon l'ordre des variables et ajouter une ligne vide entre R² ajusté et const
 def reordonner_lignes(tableau, ordre_variables):
     """
@@ -216,6 +196,7 @@ def reordonner_lignes(tableau, ordre_variables):
     
     return tableau_reorganise
 
+
 # Renommer les colonnes des coefficients avec M1, M2, M3, M4 en fonction des modèles
 def renommer_coef_colonnes(tableau, prefixe):
     """
@@ -241,6 +222,7 @@ def renommer_coef_colonnes(tableau, prefixe):
     tableau = tableau.rename(columns={col: "" for col in tableau.columns if "pvalue" in col})
     
     return tableau
+
 
 # Vecteurs ajoutés
 ordre_variables_app = [
@@ -272,6 +254,7 @@ ordre_variables_app = [
     'population_plus_20000',
 ]
 
+
 ordre_variables_mai = [
     'Observations',
     'R² ajusté',
@@ -300,6 +283,7 @@ ordre_variables_mai = [
     'population_10000-20000',
     'population_plus_20000'
 ]
+
 
 def nettoyer_coordinates(coords):
     """
@@ -331,6 +315,7 @@ def nettoyer_coordinates(coords):
     if isinstance(coords, float) or coords is None:  # Si c'est un NaN ou autre, retourner None
         return None
     return coords  # Par défaut, retourner la valeur initiale (si elle est correcte)
+
 
 def traiter_resultats(modele_app1, modele_app2, modele_app3, modele_app4, modele_mai1, modele_mai2, modele_mai3, modele_mai4):
     """
@@ -420,3 +405,93 @@ def traiter_resultats(modele_app1, modele_app2, modele_app3, modele_app4, modele
 
     # Retourner les deux tableaux traités
     return tableau_app, tableau_mai
+
+
+def prepare_columns(df, modeling):
+    """
+    Cette fonction prépare les colonnes du DataFrame en effectuant diverses transformations et 
+    en définissant des listes de colonnes explicatives et géographiques pour une analyse ultérieure.
+    
+    Elle applique notamment une transformation logarithmique sur certaines variables continues 
+    et génère plusieurs listes de colonnes explicatives pour différentes étapes d'un modèle.
+
+    Parameters:
+    -----------
+    df : pandas.DataFrame
+        Le DataFrame contenant les données à transformer.
+    modeling : module
+        Le module contenant la fonction `transformer_log` utilisée pour appliquer les transformations logarithmiques.
+
+    Returns:
+    --------
+    df : pandas.DataFrame
+        Le DataFrame avec les colonnes transformées.
+    colonnes_geographiques : list
+        Liste des colonnes géographiques après transformation logarithmique.
+    colonnes_explicatives : list
+        Liste des colonnes explicatives de base (avant ajout de certaines autres variables).
+    colonnes_explicatives1 : list
+        Liste des colonnes explicatives incluant les variables commençant par 'commune_'.
+    colonnes_explicatives2 : list
+        Liste des colonnes explicatives incluant les colonnes géographiques.
+    colonnes_explicatives3 : list
+        Liste des colonnes explicatives excluant 'zone_inondable' et incluant 'scenario'.
+    colonnes_explicatives4 : list
+        Liste des colonnes explicatives incluant l'interaction 'zone_inondable x debordement'.
+    colonne_dependante : str
+        La colonne dépendante (ici, la transformation logarithmique du prix au mètre carré).
+    """
+    
+    # Liste des variables continues à transformer en log
+    variables_continues = [
+        "surface_reelle_bati",
+        "prix_m2",
+        "distance_min_beach",
+        "distance_min_station",
+        "distance_centre_ville"
+    ]
+    
+    # Applique la transformation logarithmique sur les variables continues
+    df = modeling.transformer_log(df, variables_continues)
+    
+    # Liste des colonnes géographiques après transformation logarithmique
+    colonnes_geographiques = [
+        "log_distance_min_beach",
+        "log_distance_min_station",
+        "log_distance_centre_ville"
+    ]
+    
+    # Liste de base des colonnes explicatives
+    colonnes_explicatives = [
+        "zone_inondable",
+        "log_surface_reelle_bati",
+        "nombre_pieces_principales",
+        'dependance',
+        'terrain'
+    ] + [
+        col for col in df.columns if col.startswith('population')
+    ] + [
+        col for col in df.columns if col.startswith('dpe')
+    ] + [
+        col for col in df.columns if col.startswith('periode_construction_dpe_')
+    ]
+    
+    # Ajoute les colonnes commençant par 'commune_' à la liste des explicatives
+    colonnes_explicatives1 = colonnes_explicatives + [col for col in df.columns if col.startswith('commune_')]
+    
+    # Ajoute les colonnes géographiques à la liste des explicatives
+    colonnes_explicatives2 = colonnes_explicatives1 + colonnes_geographiques
+    
+    # Liste des colonnes explicatives excluant 'zone_inondable' et incluant 'scenario'
+    colonnes_explicatives3 = [col for col in colonnes_explicatives2 if col != "zone_inondable"] + [
+        col for col in df.columns if col.startswith("scenario")
+    ]
+    
+    # Liste des colonnes explicatives incluant l'interaction 'zone_inondable x debordement'
+    colonnes_explicatives4 = colonnes_explicatives2 + ['zone_inondable x debordement']
+    
+    # Définir la colonne dépendante (log du prix au mètre carré)
+    colonne_dependante = "log_prix_m2"
+    
+    # Retourner le DataFrame modifié et toutes les listes de colonnes créées
+    return df, colonnes_geographiques, colonnes_explicatives, colonnes_explicatives1, colonnes_explicatives2, colonnes_explicatives3, colonnes_explicatives4, colonne_dependante
