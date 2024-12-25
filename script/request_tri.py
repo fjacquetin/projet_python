@@ -1,6 +1,7 @@
 import time
 import requests
 
+
 def check_inondable(lat, lon, timeout=3):
     """
     Vérifie si une localisation est dans une zone inondable via l'API Georisques (tri_zonage).
@@ -52,6 +53,7 @@ def check_inondable(lat, lon, timeout=3):
     except requests.exceptions.RequestException:
         # print(f"Erreur de connexion pour la commune '{commune}' (lat: {lat}, lon: {lon}): {e}")
         return 0, None, None, None
+
     
 def check_inondable_parallel(args):
     """

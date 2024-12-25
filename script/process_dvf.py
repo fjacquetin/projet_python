@@ -1,6 +1,7 @@
 import pandas as pd
 from IPython.display import display
 
+
 def afficher_tableau_par_id_mutation(df, id_mutation_str):
     """
     Affiche un tableau filtré par id_mutation dans un joli format pour Jupyter Notebook.
@@ -36,6 +37,7 @@ def afficher_tableau_par_id_mutation(df, id_mutation_str):
     display(df_filtered)
 
     return None
+
 
 def process_group(group):
     

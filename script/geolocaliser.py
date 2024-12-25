@@ -4,6 +4,7 @@ import pandas as pd
 import ast as ast
 from shapely.geometry import Point
 
+
 def fetch_coordinates(index, address, root, key):
     """
     Effectue une requête pour récupérer les coordonnées d'une adresse.
@@ -340,12 +341,24 @@ def get_ports(commune_name, api):
     except Exception:
         return None, None  # Renvoie des None en cas d'erreur
 
-# Fonction pour traiter uniquement les lignes bien formées
 def safe_convert_coordinates(value):
+    """
+    Convertit des coordonnées textuelles en liste de tuples (latitude, longitude).
+    
+    Args:
+        value: Une chaîne ou autre type représentant des coordonnées ou des données textuelles.
+
+    Returns:
+        list: Une liste de tuples (float, float) si la conversion réussit.
+        value: La valeur d'origine si la conversion échoue.
+    """
     try:
+        # Tente de convertir la valeur en une liste de tuples
         parsed = ast.literal_eval(value)
+        # Vérifie et convertit chaque élément de la liste en flottants
         return [(float(lat), float(lon)) for lat, lon in parsed]
     except Exception:
+        # Retourne la valeur brute si la conversion échoue
         return value
 
 def calculate_commune_centers(gdf_communes, df_cotieres):
