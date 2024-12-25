@@ -1,11 +1,12 @@
 import folium
 from folium.plugins import HeatMap
-import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon
 import os
-from IPython.display import display
 import numpy as np
+from PIL import Image
+import io
+
 
 def extract_polygons_from_multipolygons(gdf):
     """
@@ -33,6 +34,7 @@ def extract_polygons_from_multipolygons(gdf):
 
     # Créer un nouveau GeoDataFrame à partir des Polygons
     return gpd.GeoDataFrame(polygons_data, crs=gdf.crs)
+
 
 def plot_polygons_on_map(m, geo_data, color='blue', weight=2, fill=False):
     """
@@ -80,6 +82,7 @@ def plot_polygons_on_map(m, geo_data, color='blue', weight=2, fill=False):
 
     return m
 
+
 def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, latitude_add=0, longitude_add=0):
     """
     Crée une carte Folium avec :
@@ -103,11 +106,12 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
 
     # Extraire les données pour la commune spécifiée
     commune_row = communes_coordinates[communes_coordinates['nom_commune'] == commune_name]
+    price_data_commune = price_data[price_data['nom_commune'] == commune_name]
 
-    if commune_row.empty:
+    if commune_row.empty or price_data_commune.empty:
         return None
     
-    identifiant_tri = commune_row['identifiant_tri'].iloc[0]
+    identifiant_tri = price_data_commune['identifiant_tri'].dropna().iloc[0]
     commune_data = gdf[gdf['id_tri'] == identifiant_tri]
 
     # Vérifier si commune_data est vide
@@ -123,14 +127,14 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
     longitude_port = commune_row['longitude_port'].iloc[0]
 
     # Extraire les données de prix pour la commune
-    price_data_commune = price_data[price_data['nom_commune'] == commune_name]
+
     latitude_centre = (
-        price_data_commune['latitude_centre'].iloc[0] + latitude_add
-        if not price_data_commune.empty else 46.603354 + latitude_add
+        commune_row['latitude_centre'].iloc[0] + latitude_add
+        if not commune_row.empty else 46.603354 + latitude_add
     )
     longitude_centre = (
-        price_data_commune['longitude_centre'].iloc[0] + longitude_add
-        if not price_data_commune.empty else 1.888334 + longitude_add
+        commune_row['longitude_centre'].iloc[0] + longitude_add
+        if not commune_row.empty else 1.888334 + longitude_add
     )
 
     # Créer la carte centrée sur la commune avec le niveau de zoom spécifié
@@ -161,7 +165,7 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
     # Ajouter une légende avec les déciles
     legend_html = f"""
     <div style="position: fixed; 
-            bottom: 50px; left: 50px; width: 250px; height: 180px; 
+            bottom: 50px; left: 50px; width: 200px; height: 140px; 
             background-color: white; border: 2px solid black; 
             padding: 10px; font-size: 12px; z-index: 9999; 
             box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.3);">
@@ -189,6 +193,7 @@ def create_map(commune_name, price_data, communes_coordinates, gdf, zoom=14, lat
 
     return m
 
+
 # Fonction pour sauvegarder une carte
 def save_map(commune_name, map_obj):
     # Créer le répertoire "maps" s'il n'existe pas
@@ -200,21 +205,38 @@ def save_map(commune_name, map_obj):
     return file_name
 
 def generate_and_save_maps(price_data, communes_coordinates, gdf):
+    """
+    Génère et sauvegarde des cartes pour chaque commune.
+
+    Args:
+        price_data (pd.DataFrame): Les données de prix associées aux communes.
+        communes_coordinates (pd.DataFrame): Les coordonnées des communes.
+        gdf (gpd.GeoDataFrame): Le GeoDataFrame contenant les données géospatiales.
+
+    Returns:
+        dict: Un dictionnaire associant le nom de chaque commune au chemin du fichier de la carte générée.
+    """
     maps = {}
+
     for _, row in communes_coordinates.iterrows():
-        # Accéder aux valeurs de la ligne actuelle via 'row'
+        # Récupérer le nom de la commune
         commune_name = row['nom_commune']
-        
-        # Créer une carte pour chaque commune
-        m = create_map(commune_name, price_data, communes_coordinates, gdf)
-        
-        # Vérifier si la carte a été générée
+
+        # Vérifier si des données de prix existent pour cette commune
+        if price_data[price_data['nom_commune'] == commune_name].empty:
+            m = None # Arrête complètement l'exécution de la fonction
+        else:
+            # Générer une carte pour la commune
+            m = create_map(commune_name, price_data, communes_coordinates, gdf)
+
+        # Vérifier si la carte a bien été générée
         if m is not None:
-            # Sauvegarder la carte et l'ajouter au dictionnaire maps
+            # Sauvegarder la carte et ajouter le chemin au dictionnaire
             file_name = save_map(commune_name, m)
             maps[commune_name] = file_name
-        
+
     return maps
+
 
 # Fonction pour ajouter un seul marker
 def add_marker(m, lat, lon, color, icon, tooltip=None):
@@ -224,19 +246,46 @@ def add_marker(m, lat, lon, color, icon, tooltip=None):
         tooltip=tooltip
     ).add_to(m)
 
+
 # Fonction pour ajouter une liste de markers
 def add_markers_from_list(m, coordinates, color, icon, tooltip):
     for coord in coordinates:
         if isinstance(coord, tuple) and len(coord) == 2:
             lat, lon = coord
             add_marker(m, lat, lon, color, icon, tooltip)
-            
+       
+
 def display_map_in_notebook(commune_name, price_data, communes_coordinates, gdf, zoom=14, latitude_add=0, longitude_add=0):
     """
-    Affiche la carte dans un notebook Jupyter
+    Affiche une capture d'écran d'une carte Folium dans un notebook Jupyter.
+    
+    Args:
+        commune_name (str): Nom de la commune.
+        price_data (pd.DataFrame): Données de prix.
+        communes_coordinates (pd.DataFrame): Coordonnées des communes.
+        gdf (GeoDataFrame): GeoDataFrame contenant les données géographiques.
+        zoom (int, optional): Niveau de zoom de la carte. Default à 14.
+        latitude_add (float, optional): Ajustement de latitude. Default à 0.
+        longitude_add (float, optional): Ajustement de longitude. Default à 0.
+    
+    Returns:
+        Image: Une image PIL affichant la carte.
     """
+    # Créer la carte Folium
     m = create_map(commune_name, price_data, communes_coordinates, gdf, zoom, latitude_add, longitude_add)
-    display(m)
+    
+    # Générer l'image de la carte avec un niveau de détail de 10
+    img_data = m._to_png(5)
+    
+    # Convertir l'image PNG en image PIL
+    img = Image.open(io.BytesIO(img_data))
+    
+    # Sauvegarder l'image si nécessaire
+    img.save(f"maps/{commune_name}.png")
+    
+    # Retourner l'image PIL
+    return img
+
 
 # Fonction de conversion forcée pour transformer les coordonnées sous forme de liste de tuples (latitude, longitude)
 def force_convert_to_tuple_list(beach_coordinates):
