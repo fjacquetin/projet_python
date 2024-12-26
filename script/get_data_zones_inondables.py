@@ -7,6 +7,7 @@ import zipfile
 import glob
 from PIL import Image
 import io
+import shutil
 
 
 def get_communes_france(url_communes='https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/communes.geojson', fichier_sortie_communes_france = 'data/communes_france/communes_france.shp'):
@@ -66,14 +67,6 @@ def get_communes_cotieres(fichier_communes_france = "data/communes_france/commun
         os.makedirs(repertoire_communes_cotieres)
         gdf_communes_cotieres.to_file(fichier_sortie_communes_cotieres)
     
-
-import folium
-import geopandas as gpd
-import pandas as pd
-from shapely import wkt
-from PIL import Image
-import io
-from IPython.display import display, Image as IPImage
 
 def show_communes_cotieres(fichier_communes_cotieres_shp="data/communes_cotieres/communes_cotieres.shp", 
                            communes_cotieres_shp_map='data/map_communes_cotieres_shp.html'
@@ -156,23 +149,21 @@ def get_zones_inondables():
     for departement in liste_departements_cotiers_sans_Nan:
         telecharger_et_traiter_departement(departement, dossier_zones_inondables)
 
-# Fonction de fusion des fichiers shapefiles
 def fusion_fichiers_inondations(nomenclature_zones_inondables="iso_ht_03_01for_s_"):
     """
-    Fusionner les fichiers shapefiles des zones inondables et enregistrer le résultat.
+    Fusionner les fichiers shapefiles des zones inondables, enregistrer le résultat,
+    et supprimer les répertoires commençant par 'tri' dans data/zones_inondables.
     """
-    fichiers_zones_inondables = glob.glob(os.path.join("data/zones_inondables/**/**/", f"*{nomenclature_zones_inondables}*.shp"))
+    # Recherche des fichiers shapefiles correspondant à la nomenclature
+    fichiers_zones_inondables = glob.glob(
+        os.path.join("data/zones_inondables/**/**/", f"*{nomenclature_zones_inondables}*.shp"), 
+        recursive=True
+    )
     print(f"Nombre de fichiers trouvés : {len(fichiers_zones_inondables)}")
-
-    # Suppression des fichiers .shp qui ne correspondent pas aux zones inondables
-    fichiers_shp_a_supprimer = glob.glob(os.path.join("data/zones_inondables/**/**/", "*.shp"))
-    for f in fichiers_shp_a_supprimer:
-        if f not in fichiers_zones_inondables:
-            os.remove(f)
 
     gdf_liste = []
     for fichier_shp in fichiers_zones_inondables:
-        departement = fichier_shp.split('.')[0][-2:]
+        departement = fichier_shp.split('.')[-2][-2:]  # Extraire le département
         gdf = gpd.read_file(fichier_shp)
         gdf['dept'] = departement
         gdf_liste.append(gdf[['id', 'dept', 'id_tri', 'geometry']])
@@ -183,9 +174,14 @@ def fusion_fichiers_inondations(nomenclature_zones_inondables="iso_ht_03_01for_s
     # Simplification géométrique
     gdf_combine['geometry'] = gdf_combine['geometry'].simplify(tolerance=5)
 
-    print("Export du geodataframe des zones inondables en shp")
+    print("Export du geodataframe des zones inondables en shapefile...")
     output_shp = "data/zones_inondables/zones_inondables.shp"
     gdf_combine.to_file(output_shp)
+
+    # Suppression des répertoires commençant par "tri"
+    tri_dirs = glob.glob(os.path.join("data/zones_inondables/", "tri*"))
+    for tri_dir in tri_dirs:
+        shutil.rmtree(tri_dir, ignore_errors=True)
 
 
 def edition_carte_zones_inondables(fichier_shp_zones_inondables="data/zones_inondables/zones_inondables.shp"):
