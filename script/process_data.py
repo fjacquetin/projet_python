@@ -8,6 +8,7 @@ import zipfile
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from IPython.display import display
 
 
 def fix_coordinates_format(coord_str):
@@ -441,21 +442,28 @@ def compute_percentage(df, column):
     return result_df
 
 
-def plot_density(df, column, xlim=(0, 10000)):
+def plot_density(df, column, type='', xlim=(0, 10000)):
     """
     Trace la densité des données d'une colonne d'un DataFrame.
 
     Args:
         df (pd.DataFrame): Le DataFrame contenant les données.
         column (str): Le nom de la colonne pour laquelle tracer la densité.
-        xlim (tuple, optional): Limites de l'axe X (par défaut (0, 10000)).
+        type (str, optional): Un texte supplémentaire à ajouter au titre du graphique. Par défaut, le titre n'inclut rien.
+        xlim (tuple, optional): Limites de l'axe X sous la forme (min, max). Par défaut, les limites sont définies à (0, 10000).
+
+    Returns:
+        None: Affiche le graphique de la densité mais ne retourne rien.
+
+    Exemple:
+        plot_density(df, 'prix_m2', type='kde', xlim=(0, 5000))
     """
     # Tracer la densité de la colonne spécifiée
     plt.figure(figsize=(10, 6))
     sns.kdeplot(df[column], shade=True, color="skyblue", alpha=0.7)
 
     # Ajouter un titre et des labels
-    plt.title(f'Densité de {column}', fontsize=16)
+    plt.title(f'Densité de {column} {type}', fontsize=16)
     plt.xlabel(column, fontsize=14)
     plt.ylabel('Densité', fontsize=14)
     plt.xlim(xlim)
@@ -463,3 +471,162 @@ def plot_density(df, column, xlim=(0, 10000)):
     # Afficher le graphique
     plt.tight_layout()
     plt.show()
+
+    return None
+
+    return None
+
+
+def analyze_top_communes(base):
+    """
+    Analyse les 10 communes les plus peuplées et calcule les occurrences par zones.
+    
+    Parameters:
+        base (pd.DataFrame): Un DataFrame contenant les colonnes 'nom_commune', 
+                             'Population', et 'identifiant_tri'.
+                             
+    Returns:
+        pd.DataFrame: Un DataFrame trié contenant le nombre d'occurrences par commune et zone.
+    """
+    # Sélection des 10 communes les plus peuplées
+    top_10_communes = (
+        base[['nom_commune', 'Population']]
+        .drop_duplicates(subset='nom_commune', keep='first')
+        .sort_values(by='Population', ascending=False)
+        .nlargest(10, 'Population')
+    )
+    
+    # Liste des noms des 10 communes
+    top_10_communes_names = top_10_communes['nom_commune'].unique()
+    
+    # Filtrer le DataFrame pour ne conserver que les communes sélectionnées
+    filtered_base = base[base['nom_commune'].isin(top_10_communes_names)]
+    
+    # Grouper par 'nom_commune' et 'identifiant_tri', puis compter les occurrences
+    zone_counts = (
+        filtered_base.groupby(['nom_commune', 'identifiant_tri'])
+        .size()
+        .reset_index(name='nombre_occurences')
+    )
+    
+    # Ajouter la population des communes
+    zone_counts = pd.merge(
+        zone_counts, 
+        top_10_communes[['nom_commune', 'Population']], 
+        on='nom_commune', 
+        how='left'
+    )
+    
+    # Trier les résultats par la population des communes
+    tri_by_commune = (
+        zone_counts.sort_values(by='Population', ascending=False)
+        .drop(columns=['Population'])
+        .reset_index(drop=True)
+    )
+    
+    return tri_by_commune
+
+def display_region_and_commune_stats(df_cotieres):
+    """
+    Génère et affiche deux tableaux : 
+    1. Nombre de communes et population totale par région.
+    2. Top 10 des communes par population.
+
+    Parameters:
+        df_cotieres (pd.DataFrame): Un DataFrame contenant au moins les colonnes 
+                                    'regionName', 'Nom commune', et 'Population'.
+                                    
+    Returns:
+        None
+    """
+    # Statistiques par région
+    stats_region_filtered = (
+        df_cotieres.groupby('regionName').apply(
+            lambda x: pd.Series({
+                'nombre_communes': x['Nom commune'].nunique(),
+                'population_totale': x['Population'].sum()  # Assurez-vous que 'Population' existe
+            })
+        ).reset_index()
+    )
+    
+    # Trier par nombre de communes
+    tableau_communes = stats_region_filtered.sort_values(by='nombre_communes', ascending=False).fillna("")
+    
+    # Afficher le tableau des régions
+    print("Tableau des régions :")
+    display(
+        tableau_communes.style
+        .hide(axis="index")
+    )
+    
+    # Statistiques par commune
+    stats_communes = (
+        df_cotieres.groupby('Nom commune').apply(
+            lambda x: pd.Series({
+                'Population': x['Population'].sum()  # Assurez-vous que 'Population' existe
+            })
+        ).reset_index()
+    )
+    
+    # Top 10 des communes par population
+    top_10_communes = (
+        stats_communes
+        .sort_values(by='Population', ascending=False)
+        .head(10)
+    )
+    
+    # Formater et afficher le tableau des communes
+    print("Top 10 des communes par population :")
+    display(
+        top_10_communes.style
+        .hide(axis="index")
+        .format({'Population': lambda x: f"{x:,.0f}".replace(',', ' ')})
+    )
+    
+    return None
+
+
+def calculate_variable_summary(gdf):
+    """
+    Calcule la part de valeurs renseignées pour chaque colonne d'un DataFrame,
+    filtre les colonnes d'intérêt, et retourne un DataFrame stylé pour affichage.
+
+    Parameters:
+        gdf (pd.DataFrame): Le DataFrame contenant les données.
+        columns_to_display (list): La liste des colonnes à inclure dans la sortie.
+
+    Returns:
+        styled_table (pd.io.formats.style.Styler): Un objet Styler pour affichage dans un notebook.
+    """
+    
+    columns_to_display = [
+    "Population",
+    "latitude_mairie", 
+    "beach_coordinates",
+    "station",
+    "latitude_port"
+    ]
+    
+    # Calcul de la part de valeurs renseignées
+    summary = {
+        "Variable": gdf.columns,
+        "Part (%)": [
+            gdf[col].notnull().mean() * 100 for col in gdf.columns
+        ]
+    }
+
+    # Création d'un DataFrame pour présentation
+    summary_df = pd.DataFrame(summary)
+
+    # Filtrer uniquement les colonnes désirées
+    filtered_summary_df = summary_df[summary_df["Variable"].isin(columns_to_display)]
+
+    # Style pour affichage dans le notebook
+    styled_table = (
+        filtered_summary_df.style
+        .hide(axis="index")  # Cache l'index
+        .set_caption("Part de variables renseignées")
+        .format({"Part (%)": "{:.1f}%"})  # Formate les pourcentages
+    )
+    display(styled_table)
+    return None
