@@ -235,7 +235,7 @@ def generate_and_save_maps(price_data, communes_coordinates, gdf):
             file_name = save_map(commune_name, m)
             maps[commune_name] = file_name
 
-    return maps
+    return None
 
 
 # Fonction pour ajouter un seul marker

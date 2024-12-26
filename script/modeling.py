@@ -5,6 +5,47 @@ from geopy.distance import geodesic
 import math
 
 
+def get_transactions_info(transactions):
+    # Calcul des informations
+    info = {
+        'Nombre de transactions': len(transactions),
+        'Part d\'appartements': (transactions['type_local'] == 'Appartement').mean(),
+        'Prix moyen au mètre carré des appartements': transactions[transactions['type_local'] == 'Appartement']['prix_m2'].mean(),
+        'Prix moyen au mètre carré des maisons': transactions[transactions['type_local'] == 'Maison']['prix_m2'].mean(),
+        'Modalité la plus présente de classe_bilan_dpe': transactions['classe_bilan_dpe'].mode()[0],
+        'Modalité la plus présente de période_construction_dpe': (
+            transactions['periode_construction_dpe'].mode()[0]
+        ),
+        'Part des transactions avec un terrain': (transactions['terrain'] == 1).mean(),
+        'Part des transactions avec une dépendance': (transactions['dependance'] == 1).mean(),
+        'Part des transactions en ZI': (transactions['zone_inondable'] == 1).mean(),
+        'Part des transactions en ZI et risque fort': (
+            (transactions['zone_inondable'] == 1) & (transactions['code_scenario'] == '01For')).mean(),
+        'Part des transactions en ZI en aléa de submersion de marine': (
+            (transactions['libelle_type_inondation'] == 'submersion marine') & (transactions['zone_inondable'] == 1)
+        ).mean()
+    }
+    
+    # Fonction pour arrondir et formater les valeurs
+    def format_value(value, is_percentage=False):
+        if isinstance(value, str):  # Si c'est une chaîne (modalité), on ne modifie pas
+            return value
+        if is_percentage:  # Si c'est un pourcentage, on multiplie par 100, arrondit et affiche sans décimale
+            return f"{round(value * 100)}%"  # Affichage sans décimales
+        return round(value)  # Sinon, on arrondit à l'unité (sans décimales)
+
+    # Appliquer la fonction de formatage à chaque valeur du dictionnaire
+    formatted_info = {
+        key: format_value(value, is_percentage=('Part' in key))
+        for key, value in info.items()
+    }
+
+    # Convertir en DataFrame pour un affichage structuré sans trier
+    info_df = pd.DataFrame(list(formatted_info.items()), columns=['Info', 'Valeur'])
+
+    return info_df
+
+
 def distance_minimale(lat1, lon1, liste_coords):
     """
     Calcule la distance minimale entre un point donné et une liste de coordonnées géographiques.
