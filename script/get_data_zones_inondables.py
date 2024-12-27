@@ -35,37 +35,36 @@ def get_communes_france(url_communes='https://raw.githubusercontent.com/gregoire
     #export des communes en Shapefile
     gdf_communes.to_file(fichier_sortie_communes_france)
 
-def get_communes_cotieres(fichier_communes_france = "data/communes_france/communes_france.shp", fichier_trait_de_cote = "data/trait_de_cote/TCH_FRA_V2/Shapefile/TCH.shp",\
-     fichier_sortie_communes_cotieres="data/communes_cotieres/communes_cotieres.shp"):
-    """
-        Fonction de récupération des communes cotières en France à partir d'une jointure spatiale
-    
-        fichier_communes_france (str): localisation fichier des communes shp
-        fichier_trait_de_cote (str): localisation fichier trait de cote shp
-        fichier_sortie_communes_cotieres (str): localisation fichier communes côtieres shp
-    """
 
-    #chargement des communes et du trait de côte
+def get_communes_cotieres(fichier_communes_france="data/communes_france/communes_france.shp",
+                          fichier_trait_de_cote="data/trait_de_cote/TCH_FRA_V2/Shapefile/TCH.shp",
+                          fichier_sortie_communes_cotieres="data/communes_cotieres/communes_cotieres.shp"):
+    """
+    Fonction de récupération des communes côtières en France à partir d'une jointure spatiale
+
+    fichier_communes_france (str): Chemin vers le fichier des communes (shapefile)
+    fichier_trait_de_cote (str): Chemin vers le fichier du trait de côte (shapefile)
+    fichier_sortie_communes_cotieres (str): Chemin vers le fichier de sortie des communes côtières (shapefile)
+    """
+    # Chargement des fichiers shapefile
     gdf_communes = gpd.read_file(fichier_communes_france)
     gdf_trait_cote = gpd.read_file(fichier_trait_de_cote)
 
-    #jointure spatiale pour récupérer les communes cotières
+    # Jointure spatiale pour identifier les communes côtières
     gdf_communes_cotieres = gpd.sjoin(gdf_communes, gdf_trait_cote, how='inner', predicate='intersects')
-    repertoire_communes_cotieres = "data/communes_cotieres"
-    
+
+    # Déterminer le répertoire de sortie
+    repertoire_communes_cotieres = os.path.dirname(fichier_sortie_communes_cotieres)
+
+    # Supprimer et recréer le répertoire s'il existe, sinon le créer
     if os.path.exists(repertoire_communes_cotieres):
-        if os.path.isdir(repertoire_communes_cotieres):
-            # Enregistrer le fichier .shp dans le répertoire existant
-            gdf_communes_cotieres.to_file(fichier_sortie_communes_cotieres)
-        else:
-        # Si c'est un fichier mais pas un répertoire, le supprimer et recréer le répertoire
-            os.remove(repertoire_communes_cotieres)
-            os.makedirs(repertoire_communes_cotieres)
-            gdf_communes_cotieres.to_file(fichier_sortie_communes_cotieres)
-    else:
-        # Si le répertoire n'existe pas, le créer
-        os.makedirs(repertoire_communes_cotieres)
-        gdf_communes_cotieres.to_file(fichier_sortie_communes_cotieres)
+        shutil.rmtree(repertoire_communes_cotieres)
+    os.makedirs(repertoire_communes_cotieres)
+
+    # Enregistrer le fichier shapefile des communes côtières
+    gdf_communes_cotieres.to_file(fichier_sortie_communes_cotieres)
+
+    print(f"Fichier des communes côtières enregistré dans {fichier_sortie_communes_cotieres}")
     
 
 def show_communes_cotieres(fichier_communes_cotieres_shp="data/communes_cotieres/communes_cotieres.shp", 
