@@ -1,6 +1,6 @@
 ## Projet Python : La décote immobilière sur les littoraux  
 **Auteurs** : Florian Jacquetin & Philémon Pensier, Groupe 8  
-
+**Important** : La version de Python à utiliser est 3.12.8
 ---
 
 ## Sommaire  
@@ -36,6 +36,10 @@ Les données reposent sur les sources suivantes :
 - L'API Adresse : https://adresse.data.gouv.fr/api-doc/adresse  
 - L'API Overpass, via le module overpy de Python  
 
+La géolocalisation est lancée en entier dans la partie 3. Les communes côtières. Les autres requêtes ont été réalisées en amont et sont utilisées à travers des fichiers parquet enregistrés au préalable.
+
+D'une part, certaines requêtes étaient excessivement longues (30 minutes pour Géorisques, malgré la parallélisation), d'autre part Géorisques était parfois surchargé, ce qui conduisait à des résultats différents selon les simulations.
+De même, la base DBNB est intégré avec un fichier parquet, le téléchargement de la base étant excessivement lourd (> 100 Go).
 ---
 
 ## 4. Présentation du dépôt  
@@ -53,7 +57,7 @@ C'est cette version exécutée qui tient lieu de rapport final.
 - `requirements.txt` : Contient la liste des dépendances nécessaires à installer avec `pip`.  
 
 **Instructions :**  
-1. Assurez-vous d’avoir Python 3.x installé.  
+1. Assurez-vous d’avoir Python 3.12.8 installé.  
 2. Lancez le notebook principal (sans résultats enregistrés) : `main.ipynb`.  
 
 ---
