@@ -1,6 +1,6 @@
 ## Projet Python : La décote immobilière sur les littoraux  
 **Auteurs** : Florian Jacquetin & Philémon Pensier, Groupe 8  
-**Important** : La version de Python à utiliser est 3.12.8
+**Important** : La version de Python à utiliser est 3.12.7/3.12.8
 ---
 
 ## Sommaire  
