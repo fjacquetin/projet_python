@@ -36,7 +36,7 @@ Les données reposent sur les sources suivantes :
 - L'API Adresse : https://adresse.data.gouv.fr/api-doc/adresse  
 - L'API Overpass, via le module overpy de Python  
 
-La géolocalisation est lancée en entier dans la partie 3. Les communes côtières. Les autres requêtes ont été réalisées en amont et sont utilisées à travers des fichiers parquet enregistrés au préalable.
+La géolocalisation des actifs manquants est lancée en entier dans la partie 4. Les autres requêtes ont été réalisées en amont et sont utilisées à travers des fichiers parquet/csv enregistrés au préalable.
 
 D'une part, certaines requêtes étaient excessivement longues (30 minutes pour Géorisques, malgré la parallélisation), d'autre part Géorisques était parfois surchargé, ce qui conduisait à des résultats différents selon les simulations.
 De même, la base DBNB est intégré avec un fichier parquet, le téléchargement de la base étant excessivement lourd (> 100 Go).
@@ -46,7 +46,7 @@ De même, la base DBNB est intégré avec un fichier parquet, le téléchargemen
 Notre production est essentiellement localisée dans deux versions d'un fichier `main.ipynb` :
 
 - **Version 1** : Contient uniquement le code non exécuté et les commentaires entre les cellules.  
-- **Version 2** : Contient le code préalablement exécuté pour présenter les résultats même en cas d'inaccessibilité temporaire des sources.  
+- **Version 2 (with results)** : Contient le code préalablement exécuté pour présenter les résultats même en cas d'inaccessibilité temporaire des sources.  
 
 C'est cette version exécutée qui tient lieu de rapport final.  
 
