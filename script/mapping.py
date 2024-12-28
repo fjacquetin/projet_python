@@ -4,8 +4,6 @@ import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon
 import os
 import numpy as np
-from PIL import Image
-import io
 
 
 def extract_polygons_from_multipolygons(gdf):
@@ -269,22 +267,12 @@ def display_map_in_notebook(commune_name, price_data, communes_coordinates, gdf,
         longitude_add (float, optional): Ajustement de longitude. Default à 0.
     
     Returns:
-        Image: Une image PIL affichant la carte.
+        folium.Map: Un objet Folium représentant la carte interactive.
     """
     # Créer la carte Folium
     m = create_map(commune_name, price_data, communes_coordinates, gdf, zoom, latitude_add, longitude_add)
     
-    # Générer l'image de la carte avec un niveau de détail de 10
-    img_data = m._to_png(5)
-    
-    # Convertir l'image PNG en image PIL
-    img = Image.open(io.BytesIO(img_data))
-    
-    # Sauvegarder l'image si nécessaire
-    img.save(f"maps/{commune_name}.png")
-    
-    # Retourner l'image PIL
-    return img
+    return m
 
 
 # Fonction de conversion forcée pour transformer les coordonnées sous forme de liste de tuples (latitude, longitude)

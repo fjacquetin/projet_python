@@ -5,8 +5,6 @@ import os
 import folium
 import zipfile
 import glob
-from PIL import Image
-import io
 import shutil
 
 
@@ -91,12 +89,7 @@ def show_communes_cotieres(fichier_communes_cotieres_shp="data/communes_cotieres
     # Sauvegarder la carte dans un fichier HTML
     map_shp.save(communes_cotieres_shp_map)
     
-    # Capturer une image de la carte SHP
-    img_data_shp = map_shp._to_png(5)
-    img_shp = Image.open(io.BytesIO(img_data_shp))
-    img_shp.save('maps/communes_cotieres_shp.png')  # Sauvegarder l'image SHP
-    
-    return img_shp
+    return map_shp
 
 
 # Fonction de téléchargement du fichier (sauf téléchargement asynchrone)
@@ -204,13 +197,4 @@ def edition_carte_zones_inondables(fichier_shp_zones_inondables="data/zones_inon
     # Sauvegarder la carte sous format HTML
     map.save("data/carte_zones_inondables_risque_fort.html")
 
-    # Capturer l'image de la carte (en PNG)
-    img_data = map._to_png(5)  # Ajuster la qualité avec le paramètre (ici 5)
-    
-    # Convertir l'image en PIL
-    img = Image.open(io.BytesIO(img_data))
-    
-    # Sauvegarder l'image sous format PNG
-    img.save('maps/carte_zones_inondables_risque_fort.png')
-
-    return img
+    return map
